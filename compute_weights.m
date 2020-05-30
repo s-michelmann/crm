@@ -1,0 +1,37 @@
+function [w_x, w_y, lbd3i] = compute_weights(C_xx,C_yy,C_xy, D_xy,f)
+%@Cxx covariance matrix of data at time X
+%@Cyy covariance matrix of data at time Y
+%@Cxy covariance matrix between data at time X and y
+%@Dxy covariance matrix between data at time X and Y, where the Data has
+%been shuffled
+
+% computes the weights w_x and w_y for Dimension f such that w_x*Data_x is maximally
+% correlated with Data_y * w_y, while keeping the correlation between
+% w_x*Data_Shuffled and Data_y*w_y at zero.
+
+if nargin < 5
+    fun = @(l) foo2(C_xx,C_yy,C_xy, D_xy,l, 1);
+else
+    fun = @(l) foo2(C_xx,C_yy,C_xy, D_xy,l, f);
+end
+lbd3i = fzero(fun,1);
+
+[W,D] = eig((C_xy-lbd3i*D_xy)*inv(C_yy)* ((C_xy-lbd3i*D_xy)'), C_xx);
+w_x = W(:,f);
+w_x = w_x./sqrt(w_x'*C_xx*w_x);
+lbd = sqrt(D(f,f));
+w_y = inv(C_yy)*(C_xy-lbd3i*D_xy)'/lbd *w_x;
+
+end
+function [tst] = foo2(C_xx,C_yy,C_xy, D_xy,lbd3, f)
+
+% calculate the f largest eigenvalues only!
+[W,D] = eigs((C_xy-lbd3*D_xy)*inv(C_yy)* ((C_xy-lbd3*D_xy)'), C_xx, f);
+w_x = W(:,f);
+w_x = w_x./sqrt(w_x'*C_xx*w_x);
+lbd = sqrt(D(f,f));
+w_y = inv(C_yy)*(C_xy-lbd3*D_xy)'/lbd *w_x;
+tst = w_x'*D_xy*w_y;
+
+end
+
