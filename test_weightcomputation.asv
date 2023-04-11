@@ -1,0 +1,41 @@
+
+Nobservations = 1000;
+Nsubjects = 10;
+
+
+for noise = 0:0.1:2
+    data = zeros(2,10);
+    for repeat = 1:1:10
+        time_series = randn(Nsubjects, Nobservations);   % 1000 time steps, 10 brain areas.
+        M = randn(Nsubjects,Nsubjects);
+        X = time_series + noise*randn(10, Nobservations);
+        Y = M*time_series + noise*randn(10, Nobservations); % Make the datas
+        C_xy = X*Y';
+        C_xx = X*X';
+        C_yy = Y*Y';
+        
+        S = randn(10, Nobservations);  % Same 10 brain areas in different experiment. Just noise
+        T = randn(10, Nobservations);
+        D_xy = S*T';
+        
+        f = 2;
+        [w_x, w_y, lbd3i] = compute_weights(C_xx,C_yy,C_xy, D_xy,f);
+        
+        bestcc = corrcoef(inv(M)*Y, X);
+        data(1, repeat) = bestcc(2); % best case scenario
+        data(2, repeat) = w_x'*C_xy*w_y; %CRM
+    end
+
+    figure(1), hold on;
+    mu = mean(data(1,:));
+    err = std(data(1,:)) / sqrt(10);
+    errorbar(noise, mu, err, 'bo')
+    mu = mean(data(2,:));
+    err = std(data(2,:)) / sqrt(10);
+    errorbar(noise, mu, err, 'ro')
+end
+
+xlabel("Noise")
+ylabel("True corr (blue); CRM (red)")
+ylim([0,1])
+xlim([0,2])
