@@ -14,24 +14,25 @@ if nargin < 5
 else
     fun = @(l) foo2(C_xx,C_yy,C_xy, D_xy,l, f);
 end
-lbd3i = fzero(fun,1);
+lbd3i = fminsearch(fun,0);
 
-[W,D] = eig((C_xy-lbd3i*D_xy)*inv(C_yy)* ((C_xy-lbd3i*D_xy)'), C_xx);
+M = inv(C_xx)*(C_xy+lbd3i*D_xy)*inv(C_yy)* ((C_xy+lbd3i*D_xy)');
+[W,D] = eig(M);
 w_x = W(:,f);
 w_x = w_x./sqrt(w_x'*C_xx*w_x);
 lbd = sqrt(D(f,f));
-w_y = inv(C_yy)*(C_xy-lbd3i*D_xy)'/lbd *w_x;
+w_y = -inv(C_yy)*(C_xy+lbd3i*D_xy)'/lbd *w_x;
 
 end
 function [tst] = foo2(C_xx,C_yy,C_xy, D_xy,lbd3, f)
 
 % calculate the f largest eigenvalues only!
-[W,D] = eigs((C_xy-lbd3*D_xy)*inv(C_yy)* ((C_xy-lbd3*D_xy)'), C_xx, f);
+M = inv(C_xx)*(C_xy+lbd3*D_xy)*inv(C_yy)* ((C_xy+lbd3*D_xy)');
+[W,D] = eig(M);
 w_x = W(:,f);
 w_x = w_x./sqrt(w_x'*C_xx*w_x);
-lbd = sqrt(D(f,f));
-w_y = inv(C_yy)*(C_xy-lbd3*D_xy)'/lbd *w_x;
-tst = w_x'*D_xy*w_y;
+w_y = inv(C_yy)*(C_xy+lbd3*D_xy)'*w_x;
+tst = abs(w_x'*D_xy*w_y);
 
 end
 
