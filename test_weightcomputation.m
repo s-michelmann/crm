@@ -39,8 +39,10 @@ for noise = 0.05:0.1:2
         data(6, repeat) = cc(2,1).^2;
     end
 
+    % f = figure(1);
+    % f.Position = [100 100 540 400];
     figure(1)
-    
+
     subplot(1,3,1), hold on;
     mu = mean(data(1,:));
     err = std(data(1,:)) / sqrt(Nrepeats);
@@ -93,8 +95,6 @@ text(-0.5,1.15, "C", 'FontSize', 16)
 text(-3.3,1.15, "B", 'FontSize', 16)
 text(-6.3,1.15, "A", 'FontSize', 16)
 
-%% Making a matrix with one eigenvalue of zero
-% Mtmp = randn(Nsubjects,Nsubjects);
-% defu = @(u) det(Mtmp + u*eye(size(Mtmp)));
-% usingular = fzero(defu,0)
-% M = Mtmp + usingular*eye(size(Mtmp));
+set(gcf, 'Units', 'Normalized', 'OuterPosition', [0, 0.04, .7, 0.3]);
+
+exportgraphics(figure(1), 'simulation1.pdf');

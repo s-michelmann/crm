@@ -90,6 +90,7 @@ set(gca, 'tickdir','out');
 ylim([-5e-3, 5e-3])
 text(-10,6e-3, "D", 'FontSize', 16)
 
+exportgraphics(figure(1), 'simulation2.pdf');
 
 function y = make_timeseries(T)
     data = randn(T, 1);
