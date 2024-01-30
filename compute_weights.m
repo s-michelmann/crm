@@ -22,6 +22,9 @@ w_x = W(:,f);
 w_x = w_x./sqrt(w_x'*C_xx*w_x);
 lbd = sqrt(D(f,f));
 w_y = -inv(C_yy)*(C_xy+lbd3i*D_xy)'/lbd *w_x;
+if w_x'*C_xy*w_y < 0
+    w_y = -w_y; % The sign of "lbd" is not constrained. Make sure we maximize correlation
+end
 
 end
 function [tst] = foo2(C_xx,C_yy,C_xy, D_xy,lbd3, f)
