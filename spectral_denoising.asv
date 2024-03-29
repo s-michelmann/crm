@@ -5,7 +5,7 @@ T = 1000; % duration in time bins.
 fsx = 20;
 fsy = 80;
 sa = 6;   % spectral width
-As = -4;
+As = 4;
 
 fn = 60;
 sn = 2;
@@ -14,8 +14,8 @@ An = 10;
 A0 = 1; % background noise
 
 % Make slowly varying signal time seris
-f = As*make_timeseries(T,30); % signal time series.
-g = An*make_timeseries(T,30)+3; % noise time series at 60 Hz
+f = As*make_timeseries(T); % signal time series.
+g = An*make_timeseries(T); % noise time series at 60 Hz
 
 
 X = zeros(100,T);
@@ -72,10 +72,9 @@ set(gca, 'tickdir','out');
 text(-100,-10, "B", 'FontSize', 16)
 
 subplot(2,3,2)
-plot(w_xCCA, 'o-')
+plot(w_xCCA)
 hold on
-plot(w_yCCA, 'o-')
-plot([0,N],[0,0],'k--')
+plot(w_yCCA)
 title("Canonical Vectors")
 xlabel("Frequency")
 ylabel("Weight")
@@ -87,19 +86,20 @@ subplot(2,3,3)
 plot(X'*w_xCCA)
 hold on
 plot(Y'*w_yCCA)
+Rsq = 1-var(X'*w_yCCA - f) / var(f);
 title("Loading on the CCA Vectors")
 xlabel("Time")
 set(gca, 'tickdir','out');
-plot(f*std(X'*w_xCRM),'k.', 'LineWidth', 1)
+plot(f*std(X'*w_xCRM),'k--', 'LineWidth', 1)
 ylim([-0.1, 0.1])
 text(-200,0.12, "D", 'FontSize', 16)
+text(650, -0.08, ['R^2=', num2str(Rsq)], 'FontSize', 11)
 
 subplot(2,3,5)
-plot(w_xCRM, 'o-')
+plot(w_xCRM)
 hold on
-plot(w_yCRM, 'o-')
-plot([0,N],[0,0],'k--')
-title("CRM Vectors")
+plot(w_yCRM)
+title("CRM result for w_x/w_y")
 xlabel("Frequency")
 ylabel("Weight")
 set(gca, 'tickdir','out');
@@ -110,15 +110,19 @@ subplot(2,3,6)
 plot(X'*w_xCRM)
 hold on
 plot(Y'*w_yCRM)
+pred = f*std(X'*w_xCRM);
+Rsq = 1-var(X'*w_xCRM - f) / var(f);
 title("Loading on the CRM vectors")
 xlabel("Time")
 set(gca, 'tickdir','out');
-plot(f*std(X'*w_xCRM), 'k.', 'LineWidth', 1)
+plot(,'k--', 'LineWidth', 1)
 ylim([-0.1, 0.1])
 text(-200, 0.12, "F", 'FontSize', 16)
+text(650, -0.08, ['R^2=', num2str(Rsq)], 'FontSize', 11)
+
 exportgraphics(figure(1), 'simulation2.pdf');
 
-function y = make_timeseries(T,w)
+function y = make_timeseries(T)
     data = randn(T, 1);
-    y = smoothdata(data, "gaussian", w);
+    y = smoothdata(data, "gaussian", 30);
 end
