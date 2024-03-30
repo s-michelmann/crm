@@ -37,7 +37,7 @@ D_xy = Xfilt*Yfilt';
 [w_xCCA, w_yCCA, ~] = compute_weights(C_xx,C_yy,C_xy, 0*C_xy,1);
 [w_xCRM, w_yCRM, ~] = compute_weights(C_xx,C_yy,C_xy, D_xy,1);
 
-figure(1),clf;
+figure(2),clf;
 
 subplot(2,3,1)
 imagesc(X)
@@ -101,4 +101,4 @@ plot(hidden_signal*std(X'*w_xCRM),'k--', 'LineWidth', 2)
 ylim([-0.05, 0.05])
 text(-200,0.061, "F", 'FontSize', 16)
 
-exportgraphics(figure(1), 'simulation3.pdf');
+exportgraphics(figure(2), 'simulation3.pdf');
