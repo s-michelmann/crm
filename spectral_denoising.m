@@ -87,7 +87,7 @@ subplot(2,3,3)
 plot(X'*w_xCCA)
 hold on
 plot(Y'*w_yCCA)
-title("Loading on the CCA Vectors")
+title("CCA Components")
 xlabel("Time")
 set(gca, 'tickdir','out');
 plot(f*std(X'*w_xCRM),'k.', 'LineWidth', 1)
@@ -104,13 +104,13 @@ xlabel("Frequency")
 ylabel("Weight")
 set(gca, 'tickdir','out');
 ylim([-5e-3, 5e-3])
-text(-10,6e-3, "D", 'FontSize', 16)
+text(-10,6e-3, "E", 'FontSize', 16)
 
 subplot(2,3,6)
 plot(X'*w_xCRM)
 hold on
 plot(Y'*w_yCRM)
-title("Loading on the CRM vectors")
+title("CRM Components")
 xlabel("Time")
 set(gca, 'tickdir','out');
 plot(f*std(X'*w_xCRM), 'k.', 'LineWidth', 1)

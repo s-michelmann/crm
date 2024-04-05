@@ -71,7 +71,7 @@ subplot(2,3,3)
 plot(X'*w_xCCA)
 hold on
 plot(Y'*w_yCCA)
-title("Loading on the CCA Vectors")
+title("CCA Components")
 xlabel("Time")
 set(gca, 'tickdir','out');
 plot(hidden_signal*std(X'*w_xCRM),'k--', 'LineWidth', 2)
@@ -94,7 +94,7 @@ subplot(2,3,6)
 plot(X'*w_xCRM)
 hold on
 plot(Y'*w_yCRM)
-title("Loading on the CRM Vectors")
+title("CRM Components")
 xlabel("Time")
 set(gca, 'tickdir','out');
 plot(hidden_signal*std(X'*w_xCRM),'k--', 'LineWidth', 2)
