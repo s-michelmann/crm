@@ -1,4 +1,4 @@
-function [w_x, w_y, lbd3i] = compute_weights(C_xx,C_yy,C_xy, D_xy,f)
+function [w_x, w_y, lbd3i] = compute_weights(C_xx,C_yy,C_xy, D_xy,f, gamma)
 %@Cxx covariance matrix of data at time X
 %@Cyy covariance matrix of data at time Y
 %@Cxy covariance matrix between data at time X and y
@@ -8,7 +8,12 @@ function [w_x, w_y, lbd3i] = compute_weights(C_xx,C_yy,C_xy, D_xy,f)
 % computes the weights w_x and w_y for Dimension f such that w_x*Data_x is maximally
 % correlated with Data_y * w_y, while keeping the correlation between
 % w_x*Data_Shuffled and Data_y*w_y at zero.
-
+if nargin>5
+    I = eye(size(C_xx,1));
+    C_xx = (1-gamma)* C_xx + gamma*I*trace(C_xx);
+    I = eye(size(C_yy,1));
+    C_yy = (1-gamma)* C_yy + gamma*I*trace(C_yy);
+end
 if nargin < 5
     fun = @(l) foo2(C_xx,C_yy,C_xy, D_xy,l, 1);
 else
