@@ -191,7 +191,7 @@ top_left_vals_od = top_left_vals(~eye(size(top_left_vals)));
 bottom_right_vals_od = bottom_right_vals(~eye(size(bottom_right_vals)));
 
 class_vals = cat(1, top_left_vals_od, bottom_right_vals_od);
-baseline_vals = cat(1, bottom_left_vals, bottom_right_vals);
+baseline_vals = cat(1, bottom_left_vals, top_right_vals);
 
 % PLOTTING Rain Clouds
 % Create raincloud plots
@@ -199,6 +199,9 @@ figure;
 hold on;
 subplot(211);
 h1 = raincloud_plot(diag_vals(:), 'box_on', 1, 'color', hex2rgb('#F35B04'), 'alpha', 0.5, 'box_dodge', 1, 'box_dodge_amount', 0.1, 'dot_dodge_amount', 0.1, 'box_col_match', 0);
+h2 = raincloud_plot(class_vals(:), 'box_on', 1, 'color', hex2rgb('#F7B801'), 'alpha', 0.5, 'box_dodge', 1, 'box_dodge_amount', 0.3, 'dot_dodge_amount', 0.3, 'box_col_match', 0);
+h3 = raincloud_plot(baseline_vals(:), 'box_on', 1, 'color', hex2rgb('#3D348B'), 'alpha', 0.5, 'box_dodge', 1, 'box_dodge_amount', 0.5, 'dot_dodge_amount', 0.5, 'box_col_match', 0);
+xlim([-0.02 0.09]);
 subplot(212);
 % Set the legend
 legend([h1{1}], {'Item'}, ...
@@ -206,7 +209,7 @@ legend([h1{1}], {'Item'}, ...
 xlabel('Distance', 'FontName', 'Helvetica', 'FontSize', 16);
 set(gca, 'YColor', 'none');
 
-% xlim([-0.0005 0.002]);
+
 %
 subplot(212);
 yyaxis left
