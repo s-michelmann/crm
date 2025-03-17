@@ -300,4 +300,3 @@ legend([h1{1}, h2{1}, h3{1}], {'Item', 'Class', 'Baseline'}, ...
 
 xlabel('Distance', 'FontName', 'Helvetica', 'FontSize', 16);
 set(gca, 'YColor', 'none');
-)
