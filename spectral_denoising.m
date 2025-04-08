@@ -17,7 +17,6 @@ A0 = 1; % background noise
 f = As*make_timeseries(T,30); % signal time series.
 g = An*make_timeseries(T,30)+3; % noise time series at 60 Hz
 
-
 X = zeros(100,T);
 Y = zeros(100,T);
 
