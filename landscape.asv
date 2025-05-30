@@ -1,0 +1,44 @@
+
+Nsubjects = 5;
+Nobservations = 50;
+noise = 1;
+
+X = randn(Nsubjects, Nobservations); 
+
+M = randn(Nsubjects,Nsubjects);
+
+Y = M*X + noise*randn(Nsubjects, Nobservations); % Datasets so that X and Y are correlated + corrupted by noise
+
+C_xy = X*Y';
+C_xx = X*X';
+C_yy = Y*Y';
+
+S = randn(Nsubjects, Nobservations);  % Same brain areas in different experiment. Just noise
+T = randn(Nsubjects,Nsubjects)*S + 0.5*randn(Nsubjects, Nobservations);
+D_xy = S*T';
+
+figure(1), clf;
+for lbd3 = -1:0.1:1
+    M = inv(C_xx)*(C_xy+lbd3*D_xy)*inv(C_yy)* ((C_xy+lbd3*D_xy)');
+    [W,D] = eig(M);
+
+    eigenvalues = diag(D)
+
+    for i = 1:Nsubjects
+    w_x = W(:,f);
+    w_y = inv(C_yy)*(C_xy+lbd3*D_xy)'*w_x;
+    constrai = abs(w_x'*D_xy*w_y);
+    end
+
+
+    scatter(lbd3*ones(Nsubjects,1), )
+    hold on;
+end
+xlabel("lambda_3")
+ylabel("Eigenvalues)")
+
+% [w_x, w_y, lbd3i] = compute_weights(C_xx,C_yy,C_xy, D_xy,f);
+
+M = inv(C_xx)*(C_xy+lbd3*D_xy)*inv(C_yy)* ((C_xy+lbd3*D_xy)');
+[W,D] = eig(M);
+
