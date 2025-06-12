@@ -1,7 +1,7 @@
 close all;
 clear all;
 
-tic
+tic % Takes about 3h to run all
 
 rng(42);
 
@@ -12,7 +12,7 @@ Nsubjects = 10;
 Nrepeats = 10; % Averaging For the plot
 
 for noise = 0.05:0.5:10
-    data = zeros(3,Nrepeats);
+    data = zeros(4,Nrepeats);
     for repeat = 1:Nrepeats
         X = randn(Nsubjects, Nobservations); 
 
@@ -25,30 +25,22 @@ for noise = 0.05:0.5:10
         C_yy = Y*Y';
         
         S = randn(Nsubjects, Nobservations);  % Same brain areas in different experiment. Just noise
-        % T = randn(Nsubjects,Nsubjects)*S + 0.5*randn(Nsubjects, Nobservations);
         T = (0.25.*randn(Nsubjects,Nsubjects) + 0.75.*M) * S;
 
         D_xy = S*T';
         
-        %[w_x, w_y, lbd3i] = compute_weights(C_xx,C_yy,C_xy, D_xy,f);
-
         [r_wx, r_wy, r_lam, wxcxywy, wxdxywy, wxcxxwx, wycyywy] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
         w_x = r_wx(:,1); % This is the best weight vector
         w_y = r_wy(:,1);
 
-        data(1, repeat) = (w_x'*C_xy*w_y).^2; %should be as close to "1" as possible
-        data(2, repeat) = (w_x'*D_xy*w_y).^2; %should be as close to "0" as possible;
-        cc=corrcoef(w_x, w_y'*M);
-        data(3, repeat) = cc(2,1).^2;
+        data(1, repeat) = (w_x'*C_xy*w_y).^2;
+        data(2, repeat) = (w_x'*D_xy*w_y).^2;
 
-        %[w_x, w_y, lbd3i] = compute_weights(C_xx,C_yy,C_xy, 0*D_xy,f);
         [r_wx, r_wy, r_lam, wxcxywy, wxdxywy, wxcxxwx, wycyywy] = compute_weights_full(C_xx, C_yy, C_xy, 0*D_xy);
         w_x = r_wx(:,1);
         w_y = r_wy(:,1);
-        data(4, repeat) = (w_x'*C_xy*w_y).^2;
-        data(5, repeat) = (w_x'*D_xy*w_y).^2;
-        cc=corrcoef(w_x, w_y'*M);
-        data(6, repeat) = cc(2,1).^2;
+        data(3, repeat) = (w_x'*C_xy*w_y).^2;
+        data(4, repeat) = (w_x'*D_xy*w_y).^2;
     end
 
     figure(1)
@@ -57,16 +49,16 @@ for noise = 0.05:0.5:10
     mu = mean(data(1,:));
     err = std(data(1,:)) / sqrt(Nrepeats);
     errorbar(noise, mu, err, 'o', 'MarkerFaceColor', "#0072BD", 'Color',"#0072BD") % CRM result for best corr (max)
-    mu = mean(data(4,:));
-    err = std(data(4,:)) / sqrt(Nrepeats);
+    mu = mean(data(3,:));
+    err = std(data(3,:)) / sqrt(Nrepeats);
     errorbar(noise, mu, err, 'o', 'MarkerFaceColor', "#77AC30", 'Color',"#77AC30") % CCA zero for best corr
 
     subplot(1,3,2), hold on;
     mu = mean(data(2,:));
     err = std(data(2,:)) / sqrt(Nrepeats);
     errorbar(noise, mu, err, 'o', 'MarkerFaceColor', "#0072BD", 'Color',"#0072BD") % CRM result for D (=0)
-    mu = mean(data(5,:));
-    err = std(data(5,:)) / sqrt(Nrepeats);
+    mu = mean(data(4,:));
+    err = std(data(4,:)) / sqrt(Nrepeats);
     errorbar(noise, mu, err, 'o', 'MarkerFaceColor', "#77AC30", 'Color',"#77AC30") % CCA result for D (not constrained)
 end
 
@@ -80,7 +72,7 @@ ylabel("w_x'*C_{xy}*w_y")
 set(gca, 'tickdir','out');
 legend('RSM', 'CCA', 'Location','southwest')
 
-subplot(1,3,2)
+subplot(1,3,2)o
 ylim([-0.1,0.7])
 xlim([-0.1, 10.1])
 xlabel("Noise")
@@ -106,14 +98,14 @@ for lbd3 = (min(r_lam)-1): 0.01: (max(r_lam)+1)
     end
     
     subplot(1,3,3)
-    scatter(lbd3*ones(Nsubjects,1), constraint, [], correlation)
+    scatter(lbd3*ones(Nsubjects,1), constraint, 10, correlation, "filled")
     hold on;
 end
 
 %Check the roots
 subplot(1,3,3)
-plot(r_lam, 0, 'o', 'MarkerFaceColor', 'r')
-plot([min(r_lam),max(r_lam)], [0,0], 'k-')
+plot(r_lam, 0, 'o', 'MarkerFaceColor', 'r', 'MarkerEdgeColor','r')
+plot([min(r_lam)-1,max(r_lam)+1], [0,0], 'k--')
 title(length(r_lam))
 xlabel("\lambda_3")
 ylabel("Constraint = wx*Dxy*wy")
@@ -122,12 +114,12 @@ a.Label.String = 'Correlation = wx*Cxy*wy';
 caxis([-1,1])
 xlim([ min(r_lam)-1, max(r_lam)+1])
 
-text(-10.5,0.15, "C", 'FontSize', 16)
-text(-3.3,1.15, "B", 'FontSize', 16)
-text(-6.3,1.15, "A", 'FontSize', 16)
+text(-15.3,0.55, "A", 'FontSize', 18)
+text(-9.8,0.55, "B", 'FontSize', 18)
+text(-3.9,0.55, "C", 'FontSize', 18)
 
 set(gcf, 'Units', 'Normalized', 'OuterPosition', [0, 0.04, .7, 0.3]);
 
-%exportgraphics(figure(1), 'simulation1.pdf');
+exportgraphics(figure(1), 'simulation1.pdf');
 
 toc
