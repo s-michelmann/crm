@@ -1,5 +1,7 @@
 
-rng(1)
+% Takes about 2h
+
+rng(1);
 
 T = 1000; % duration in time bins.
 fsx = 20;
@@ -34,11 +36,13 @@ end
 
 
 %% Perform the analysis
+tic
+
 C_xy = X*Y';
 C_xx = X*X';
 C_yy = Y*Y';
 
-[w_xCCA, w_yCCA, ~] = compute_weights(C_xx,C_yy,C_xy, 0*C_xy,1);
+[r_wxCCA, r_wyCCA, r_lamCCA, wxcxywyCCA, wxdxywyCCA, wxcxxwxCCA, wycyywyCCA] = compute_weights_full(C_xx, C_yy, C_xy, 0*C_xy);
 
 % use CRM to denoise
 filt=zeros(100,1);
@@ -50,9 +54,17 @@ end
 S = filt.*X;  % Same brain areas in different experiment. Just noise
 T = filt.*Y;
 D_xy = S*T';
-[w_xCRM, w_yCRM, ~] = compute_weights(C_xx,C_yy,C_xy, D_xy,1);
+[r_wxCRM, r_wyCRM, r_lamCRM, wxcxywyCRM, wxdxywyCRM, wxcxxwxCRM, wycyywyCRM] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
 
+toc
 %%
+
+w_xCCA = r_wxCCA(:,1);
+w_xCRM = r_wxCRM(:,1);
+
+w_yCCA = r_wyCCA(:,1);
+w_yCRM = r_wyCRM(:,1);
+
 figure(1),clf;
 subplot(2,3,1)
 imagesc(X)
