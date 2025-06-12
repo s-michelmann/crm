@@ -1,4 +1,6 @@
 
+% around 2h
+
 rng(1)
 
 T = 2000; % duration in time bins.
@@ -34,8 +36,17 @@ C_xx = X*X';
 C_yy = Y*Y';
 D_xy = Xfilt*Yfilt';
 
-[w_xCCA, w_yCCA, ~] = compute_weights(C_xx,C_yy,C_xy, 0*C_xy,1);
-[w_xCRM, w_yCRM, ~] = compute_weights(C_xx,C_yy,C_xy, D_xy,1);
+%[w_xCCA, w_yCCA, ~] = compute_weights(C_xx,C_yy,C_xy, 0*C_xy,1);
+[r_wxCCA, r_wyCCA, r_lamCCA, wxcxywyCCA, wxdxywyCCA, wxcxxwxCCA, wycyywyCCA] = compute_weights_full(C_xx, C_yy, C_xy, 0*C_xy);
+
+%[w_xCRM, w_yCRM, ~] = compute_weights(C_xx,C_yy,C_xy, D_xy,1);
+[r_wxCRM, r_wyCRM, r_lamCRM, wxcxywyCRM, wxdxywyCRM, wxcxxwxCRM, wycyywyCRM] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
+
+w_xCCA = r_wxCCA(:,1);
+w_xCRM = r_wxCRM(:,1);
+
+w_yCCA = r_wyCCA(:,1);
+w_yCRM = r_wyCRM(:,1);
 
 figure(2),clf;
 
@@ -101,4 +112,4 @@ plot(hidden_signal*std(X'*w_xCRM),'k--', 'LineWidth', 2)
 ylim([-0.05, 0.05])
 text(-200,0.061, "F", 'FontSize', 16)
 
-exportgraphics(figure(2), 'simulation3.pdf');
+%exportgraphics(figure(2), 'simulation3.pdf');
