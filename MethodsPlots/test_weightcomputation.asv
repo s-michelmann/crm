@@ -1,7 +1,7 @@
 close all;
 clear all;
 
-tic % 8850 seconds
+tic % 8560 seconds
 
 rng(1)
 
@@ -116,16 +116,15 @@ caxis([-1,1])
 xlim([ min(r_lam)-1, max(r_lam)+1])
 
 subplot(1,3,3)
-set(gca,'fontsize',17)
-text(-4.8,0.41, "C", 'FontSize', 21)
+set(gca,'fontsize',18)
+text(-15.3,0.41, "A", 'FontSize', 22)
+text(-9.8,0.41, "B", 'FontSize', 22)
+text(-3.9,0.41, "C", 'FontSize', 22)
 
 subplot(1,3,1)
-set(gca,'fontsize',17)
-text(-2.5, 1.1, "A", 'FontSize', 21)
-
+set(gca,'fontsize',1)
 subplot(1,3,2)
-set(gca,'fontsize',17)
-text(-3.0, 0.7, "B", 'FontSize', 21)
+set(gca,'fontsize',18)
 
 set(gcf, 'Units', 'Normalized', 'OuterPosition', [0, 0.04, .7, 0.3]);
 

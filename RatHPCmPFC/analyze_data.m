@@ -1,8 +1,9 @@
 % Data citation: https://www.jneurosci.org/content/45/10/e1241242025 Rosenblum et al. 2025
 
-
-%close all;
+close all;
 clear all;
+
+tic % 511 seconds
 
 %% Load data + Make spectra
 
@@ -11,57 +12,73 @@ fs = 2000;
 nsc = 2000; % 1s chunks for spectrum
 nov = floor(nsc/2);
 
-load('/Users/ms81/Desktop/PFC_black.mat')
+load('PFC_black.mat')
 y = Samples(:);
 y = (y-mean(y))./std(y);
 [sy,f,t] = spectrogram(y,hamming(nsc, 'periodic'),nov,nff,fs);
-Y = log(abs(sy).^2);
+Y = abs(sy).^2;
 
-load('/Users/ms81/Desktop/HPC_red.mat')
+load('HPC_blue.mat')
 x = Samples(:);
 x = (x-mean(x))./std(x);
 [sx,f,t] = spectrogram(x,hamming(nsc, 'periodic'),nov,nff,fs);
-X = log(abs(sx).^2);
+X = abs(sx).^2;
 
-X = X(f<100,:);
-Y = Y(f<100,:);
+X = log(X(f<100,:));
+Y = log(Y(f<100,:));
 f = f(f<100);
 
-%%
 C_xy = X*Y';
 C_xx = X*X';
 C_yy = Y*Y';
 
-[w_xCCA, w_yCCA, ~] = compute_weights(C_xx,C_yy,C_xy, 0*C_xy,1);
+[r_wxCCA, r_wyCCA, r_lamCCA, wxcxywyCCA, wxdxywyCCA, wxcxxwxCCA, wycyywyCCA] = compute_weights_full(C_xx, C_yy, C_xy, 0*C_xy);
 
-%% use CRM to denoise
-sfilt = 2;
-ffilt = 59.6; % Center noise
+% use CRM to denoise, see spectral_denoising.m for example on simulation.
+sfilt = 10;
+ffilt = 60;
 
-filter = exp( - (f-ffilt).^2 ./ (2*sfilt*sfilt))/(sfilt*sqrt(2*pi));
-T = filter.*Y; % Only Y has 60 Hz hum.
-S = X;  
+filter = exp( - (f-ffilt).^2 ./ (2*sfilt*sfilt));
+
+S = filter.*Y;
+T = filter.*X;  
 
 D_xy = S*T';
-[w_xCRM, w_yCRM, ~] = compute_weights(C_xx,C_yy,C_xy, D_xy, 1);
+a = norm(C_xy,'fro')/norm(D_xy,'fro');
+D_xy = a*D_xy;
+
+[r_wxCRM, r_wyCRM, r_lamCRM, wxcxywyCRM, wxdxywyCRM, wxcxxwxCRM, wycyywyCRM] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
 
 %%
+
+w_xCCA = r_wxCCA(:,1);
+w_xCRM = r_wxCRM(:,1);
+
+w_yCCA = r_wyCCA(:,1);
+w_yCRM = r_wyCRM(:,1);
+
 figure(1),clf;
 subplot(2,3,1)
 imagesc(t, f, X)
+a=colorbar;
+caxis([-10,20])
+a.Label.String = 'log(Power)'
 title("Spectrogram of HPC")
-ylabel("Frequency")
-xlabel("Time")
+ylabel("Frequency [Hz]")
+xlabel("Time [s]")
 set(gca, 'tickdir','out');
-text(-100,-10, "A", 'FontSize', 16)
+text(-500,-10, "A", 'FontSize', 16)
 
 subplot(2,3,4)
 imagesc(t, f, Y)
+b=colorbar;
+caxis([-10,20])
+b.Label.String = 'log(Power)'
 title("Spectrogram of mPFC")
-xlabel("Time")
-ylabel("Frequency")
+xlabel("Time [s]")
+ylabel("Frequency [Hz]")
 set(gca, 'tickdir','out');
-text(-100,-10, "B", 'FontSize', 16)
+text(-500,-10, "B", 'FontSize', 16)
 
 subplot(2,3,2)
 plot(f, w_xCCA, 'o-')
@@ -69,19 +86,22 @@ hold on
 plot(f, w_yCCA, 'o-')
 plot([0,110], [0,0],'k--')
 title("Canonical Vectors")
-xlabel("Frequency")
+xlabel("Frequency [Hz]")
 ylabel("Weight")
 set(gca, 'tickdir','out');
-%text(-10,6e-3, "C", 'FontSize', 16)
+legend('HPC', 'mPFC', 'Location','northwest')
+text(-20,6.4e-4, "C", 'FontSize', 16)
 
 subplot(2,3,3)
 plot(X'*w_xCCA)
 hold on
 plot(Y'*w_yCCA)
 title("CCA Components")
-xlabel("Time")
+xlim([2100,2200])
+xlabel("Time [s]")
 set(gca, 'tickdir','out');
-%text(-200,0.12, "D", 'FontSize', 16)
+legend('HPC', 'mPFC', 'Location','southwest')
+text(2075, 0.0205, "D", 'FontSize', 16)
 
 subplot(2,3,5)
 plot(f,w_xCRM, 'o-')
@@ -89,42 +109,22 @@ hold on
 plot(f,w_yCRM, 'o-')
 plot([0,110],[0,0],'k--')
 title("CRM Vectors")
-xlabel("Frequency")
+xlabel("Frequency [Hz]")
 ylabel("Weight")
 set(gca, 'tickdir','out');
-%text(-10,6e-3, "E", 'FontSize', 16)
+legend('HPC', 'mPFC', 'Location','southeast')
+text(-20,2.8e-3, "E", 'FontSize', 16)
 
 subplot(2,3,6)
 plot(X'*w_xCRM)
 hold on
 plot(Y'*w_yCRM)
 title("CRM Components")
-xlabel("Time")
+xlabel("Time [s]")
 set(gca, 'tickdir','out');
-%text(-200, 0.12, "F", 'FontSize', 16)
-%exportgraphics(figure(1), 'simulation2.pdf');
+xlim([2100,2200])
+legend('HPC', 'mPFC', 'Location','southwest')
+text(2075, 0.05, "F", 'FontSize', 16)
+%exportgraphics(figure(1), 'HPC_mPFC_spec.pdf');
 
-disp('- CCA/CRM -')
-corrcoef(X'*w_xCCA, Y'*w_yCCA)
-corrcoef(X'*w_xCRM, Y'*w_yCRM)
-disp('------')
-
-%% Explicit control for theta coupling
-
-xTheta = bandfilt(x, 9, 7, fs);
-
-yTheta = bandfilt(y, 9, 7, fs);
-
-HPCsig = log(abs(hilbert(xTheta)).^2);
-PFCsig = log(abs(hilbert(yTheta)).^2);
-corrcoef(HPCsig, PFCsig)
-
-function [output] = bandfilt(x, flp, fhp, fs)
-
-    [b,a] = butter(5,flp/(fs/2)); % flp Hz lowpass
-    x_filt = filter(b,a,x);
-    
-    [b,a] = butter(5,fhp/(fs/2), 'high'); % fhp Hz highpass
-    output = filter(b,a,x_filt);
-
-end
+toc

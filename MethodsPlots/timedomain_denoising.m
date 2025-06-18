@@ -1,5 +1,7 @@
+close all;
+clear all;
 
-% around 2h
+tic % 1875 seconds
 
 rng(1)
 
@@ -36,12 +38,11 @@ C_xx = X*X';
 C_yy = Y*Y';
 D_xy = Xfilt*Yfilt';
 
-%[w_xCCA, w_yCCA, ~] = compute_weights(C_xx,C_yy,C_xy, 0*C_xy,1);
 [r_wxCCA, r_wyCCA, r_lamCCA, wxcxywyCCA, wxdxywyCCA, wxcxxwxCCA, wycyywyCCA] = compute_weights_full(C_xx, C_yy, C_xy, 0*C_xy);
 
-%[w_xCRM, w_yCRM, ~] = compute_weights(C_xx,C_yy,C_xy, D_xy,1);
 [r_wxCRM, r_wyCRM, r_lamCRM, wxcxywyCRM, wxdxywyCRM, wxcxxwxCRM, wycyywyCRM] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
 
+%%
 w_xCCA = r_wxCCA(:,1);
 w_xCRM = r_wxCRM(:,1);
 
@@ -54,7 +55,11 @@ subplot(2,3,1)
 imagesc(X)
 title("Data from area A")
 ylabel("EEG electrode #")
-xlabel("Time")
+a=colorbar;
+caxis([-6,6])
+xlim([0,1000])
+a.Label.String = 'Signal [\mu V]';
+xlabel("Time [ms]")
 set(gca, 'tickdir','out');
 text(-100,-10, "A", 'FontSize', 16)
 
@@ -62,7 +67,11 @@ subplot(2,3,4)
 imagesc(Y)
 title("Data from area B")
 ylabel("EEG electrode #")
-xlabel("Time")
+b=colorbar;
+caxis([-6,6])
+xlim([0,1000])
+b.Label.String = 'Signal [\mu V]';
+xlabel("Time [ms]")
 set(gca, 'tickdir','out');
 text(-100,-10, "B", 'FontSize', 16)
 
@@ -76,6 +85,7 @@ xlabel("EEG electrode #")
 ylabel("Weight")
 set(gca, 'tickdir','out');
 ylim([-3e-4, 3e-4])
+legend('Area A', 'Area B', 'Location','northeast')
 text(-10,3.6e-4, "C", 'FontSize', 16)
 
 subplot(2,3,3)
@@ -83,11 +93,13 @@ plot(X'*w_xCCA)
 hold on
 plot(Y'*w_yCCA)
 title("CCA Components")
-xlabel("Time")
+xlabel("Time [ms]")
 set(gca, 'tickdir','out');
-plot(hidden_signal*std(X'*w_xCRM),'k--', 'LineWidth', 2)
-ylim([-0.05, 0.05])
-text(-200,0.061, "D", 'FontSize', 16)
+plot(hidden_signal*std(X'*w_xCRM),'k-.', 'LineWidth', 2)
+ylim([-0.05, 0.1])
+xlim([0,1000])
+legend('Area A', 'Area B', 'Signal', 'Location','northeast')
+text(-200,0.114, "D", 'FontSize', 16)
 
 subplot(2,3,5)
 plot(w_xCRM, '-o')
@@ -98,6 +110,7 @@ title("CRM Vectors")
 xlabel("EEG electrode #")
 ylabel("Weight")
 set(gca, 'tickdir','out');
+legend('Area A', 'Area B', 'Location','southeast')
 ylim([-4e-3, 4e-3])
 text(-10,5e-3, "E", 'FontSize', 16)
 
@@ -106,10 +119,13 @@ plot(X'*w_xCRM)
 hold on
 plot(Y'*w_yCRM)
 title("CRM Components")
-xlabel("Time")
+xlabel("Time [ms]")
 set(gca, 'tickdir','out');
-plot(hidden_signal*std(X'*w_xCRM),'k--', 'LineWidth', 2)
-ylim([-0.05, 0.05])
-text(-200,0.061, "F", 'FontSize', 16)
+plot(hidden_signal*std(X'*w_xCRM),'k-.', 'LineWidth', 2)
+ylim([-0.05, 0.1])
+xlim([0,1000])
+text(-200,0.118, "F", 'FontSize', 16)
+legend('Area A', 'Area B', 'Signal', 'Location','northeast')
 
 %exportgraphics(figure(2), 'simulation3.pdf');
+toc
