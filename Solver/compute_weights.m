@@ -22,7 +22,7 @@ end
 lbd3i = fminsearch(fun,0);
 
 M = inv(C_xx)*(C_xy+lbd3i*D_xy)*inv(C_yy)* ((C_xy+lbd3i*D_xy)');
-[W,D] = eig(M);
+[W,D] = eigs(M,f);
 w_x = W(:,f);
 w_x = w_x./sqrt(w_x'*C_xx*w_x);
 lbd = sqrt(D(f,f));
@@ -36,7 +36,7 @@ function [tst] = foo2(C_xx,C_yy,C_xy, D_xy,lbd3, f)
 
 % calculate the f largest eigenvalues only!
 M = inv(C_xx)*(C_xy+lbd3*D_xy)*inv(C_yy)* ((C_xy+lbd3*D_xy)');
-[W,D] = eig(M);
+[W,D] = eigs(M,f);
 w_x = W(:,f);
 w_x = w_x./sqrt(w_x'*C_xx*w_x);
 w_y = inv(C_yy)*(C_xy+lbd3*D_xy)'*w_x;

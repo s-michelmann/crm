@@ -32,6 +32,11 @@ for noise = 0.05:0.5:10
         D_xy = S*T';
         
         [r_wx, r_wy, r_lam, wxcxywy, wxdxywy, wxcxxwx, wycyywy] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
+        
+        [w_xC, w_yC, lbd3C] = compute_weights(C_xx,C_yy,C_xy, D_xy, 1);
+        (w_xC'*C_xy*w_yC).^2;
+        (w_xC'*D_xy*w_yC).^2;
+        
         w_x = r_wx(:,1); % This is the best weight vector
         w_y = r_wy(:,1);
 

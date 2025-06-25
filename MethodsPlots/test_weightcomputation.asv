@@ -1,7 +1,7 @@
 close all;
 clear all;
 
-tic % 8560 seconds
+tic % 8850 seconds
 
 rng(1)
 
@@ -32,6 +32,11 @@ for noise = 0.05:0.5:10
         D_xy = S*T';
         
         [r_wx, r_wy, r_lam, wxcxywy, wxdxywy, wxcxxwx, wycyywy] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
+        
+        [w_xC, w_yC, lbd3C] = compute_weights(C_xx,C_yy,C_xy, D_xy, 1);
+        (w_xC'*C_xy*w_yC).^2;
+        (w_xC'*D_xy*w_yC).^2;
+        
         w_x = r_wx(:,1); % This is the best weight vector
         w_y = r_wy(:,1);
 
@@ -116,15 +121,16 @@ caxis([-1,1])
 xlim([ min(r_lam)-1, max(r_lam)+1])
 
 subplot(1,3,3)
-set(gca,'fontsize',18)
-text(-15.3,0.41, "A", 'FontSize', 22)
-text(-9.8,0.41, "B", 'FontSize', 22)
-text(-3.9,0.41, "C", 'FontSize', 22)
+set(gca,'fontsize',17)
+text(-4.8,0.41, "C", 'FontSize', 21)
 
 subplot(1,3,1)
-set(gca,'fontsize',1)
+set(gca,'fontsize',17)
+text(-2.5, 1.1, "A", 'FontSize', 21)
+
 subplot(1,3,2)
-set(gca,'fontsize',18)
+set(gca,'fontsize',17)
+text(-3.0, 0.7, "B", 'FontSize', 21)
 
 set(gcf, 'Units', 'Normalized', 'OuterPosition', [0, 0.04, .7, 0.3]);
 

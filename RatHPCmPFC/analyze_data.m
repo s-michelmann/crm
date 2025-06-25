@@ -57,6 +57,9 @@ w_xCRM = r_wxCRM(:,1);
 w_yCCA = r_wyCCA(:,1);
 w_yCRM = r_wyCRM(:,1);
 
+col1 = "#7678ed";
+col2 = "#f35b04";
+
 figure(1),clf;
 subplot(2,3,1)
 imagesc(t, f, X)
@@ -81,9 +84,9 @@ set(gca, 'tickdir','out');
 text(-500,-10, "B", 'FontSize', 16)
 
 subplot(2,3,2)
-plot(f, w_xCCA, 'o-')
+plot(f, w_xCCA, 'o-', 'color', col1)
 hold on
-plot(f, w_yCCA, 'o-')
+plot(f, w_yCCA, 'o-', 'color', col2)
 plot([0,110], [0,0],'k--')
 title("Canonical Vectors")
 xlabel("Frequency [Hz]")
@@ -93,9 +96,9 @@ legend('HPC', 'mPFC', 'Location','northwest')
 text(-20,6.4e-4, "C", 'FontSize', 16)
 
 subplot(2,3,3)
-plot(X'*w_xCCA)
+plot(X'*w_xCCA, 'color', col1)
 hold on
-plot(Y'*w_yCCA)
+plot(Y'*w_yCCA, 'color', col2)
 title("CCA Components")
 xlim([2100,2200])
 xlabel("Time [s]")
@@ -104,9 +107,9 @@ legend('HPC', 'mPFC', 'Location','southwest')
 text(2075, 0.0205, "D", 'FontSize', 16)
 
 subplot(2,3,5)
-plot(f,w_xCRM, 'o-')
+plot(f,w_xCRM, 'o-', 'color', col1)
 hold on
-plot(f,w_yCRM, 'o-')
+plot(f,w_yCRM, 'o-', 'color', col2)
 plot([0,110],[0,0],'k--')
 title("CRM Vectors")
 xlabel("Frequency [Hz]")
@@ -116,9 +119,9 @@ legend('HPC', 'mPFC', 'Location','southeast')
 text(-20,2.8e-3, "E", 'FontSize', 16)
 
 subplot(2,3,6)
-plot(X'*w_xCRM)
+plot(X'*w_xCRM, 'color', col1)
 hold on
-plot(Y'*w_yCRM)
+plot(Y'*w_yCRM, 'color', col2)
 title("CRM Components")
 xlabel("Time [s]")
 set(gca, 'tickdir','out');
