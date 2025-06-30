@@ -3,7 +3,7 @@ clear;
 clc;
 seed = 1234; % You can choose any integer value
 rng(seed);
-addpath("toolbox/crm/");
+addpath(genpath(pwd));
 num_components = 10;
 
 % Define parameters
