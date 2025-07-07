@@ -135,7 +135,8 @@ toc
 %% Against behavior
 load('VT1.mat')
 
-% t comes from the spectrum. 4813 time points in seconds
+% t comes from the spectrum 4813 time points in seconds
+
 tt = (Timestamps' - min(TimeStamps))*1e-6; % From behavior, measured in mus.
 %scatter(ExtractedX', ExtractedY', '.')
 
@@ -143,6 +144,7 @@ positionX = [];
 positionY = [];
 for timepoint = t
     [~, idx] = min( (tt - timepoint).^2 );
+    disp(idx)
     positionX = [positionX, ExtractedX(median(idx))];
     positionY = [positionY, ExtractedY(median(idx))];
 end
@@ -160,11 +162,6 @@ ylim([40,450])
 xlabel("X position in the maze")
 ylabel("Y position in the maze")
 title("CCA")
-set(gca, 'tickdir','out');
-b=colorbar;
-b.Label.String = 'Weight (z-scored)';
-text(50, 470, "A", 'FontSize', 16)
-
 
 subplot(1,2,2)
 crmresult = (X'*w_xCRM) + (Y'*w_yCRM);
@@ -177,12 +174,6 @@ ylim([40,450])
 xlabel("X position in the maze")
 ylabel("Y position in the maze")
 title("CRM")
-set(gca, 'tickdir','out');
-b=colorbar;
-b.Label.String = 'Weight (z-scored)';
-text(50, 470, "B", 'FontSize', 16)
-
-exportgraphics(figure(2), 'HPC_mPFC_maze.pdf');
 
 %% Coherence
 
@@ -190,12 +181,12 @@ figure(3),clf;
 [cxy,fc] = mscohere(x,y,hamming(2000),500,nff); % 500 samples of overlap
 plot(fc*fs/(2*3.14), cxy, 'b-')
 hold on;
-plot(f,w_yCCA*2*1e3, 'r-')
-plot(f,-1*w_yCRM*1e2, 'g-')
-plot([0,100],[0,0],'k--')
-xlim([0,150])
+plot(f,w_xCCA*2*1e3, 'r-')
+plot(f,-1*w_xCRM*1e2, 'g-')
+plot([0,100],[0,0],'l')
+xlim([0,200])
 xlabel("Frequency [Hz]")
-legend(["Coherence", "wCCA", "wCRM"])
+ylabel("CCA weight (red), coherence (blue)")
 
 
 %% Helpers
