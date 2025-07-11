@@ -49,6 +49,17 @@ D_xy = a*D_xy;
 
 [r_wxCRM, r_wyCRM, r_lamCRM, wxcxywyCRM, wxdxywyCRM, wxcxxwxCRM, wycyywyCRM] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
 
+
+load('VT1.mat')
+tt = (Timestamps' - min(TimeStamps))*1e-6; % From behavior, measured in mus.
+positionX = [];
+positionY = [];
+for timepoint = t % t comes from the spectrum. 4813 time points in seconds
+    [~, idx] = min( (tt - timepoint).^2 );
+    positionX = [positionX, ExtractedX(median(idx))];
+    positionY = [positionY, ExtractedY(median(idx))];
+end
+
 %%
 
 w_xCCA = r_wxCCA(:,1);
@@ -84,89 +95,56 @@ set(gca, 'tickdir','out');
 text(-500,-10, "B", 'FontSize', 16)
 
 subplot(2,3,2)
-plot(f, w_xCCA, 'o-', 'color', col1)
+plot(f, w_xCRM*1000, 'o-', 'color', col1)
 hold on
-plot(f, w_yCCA, 'o-', 'color', col2)
+plot(f, w_yCRM*1000, 'o-', 'color', col2)
 plot([0,110], [0,0],'k--')
-title("Canonical Vectors")
+ylim([-8, 7])
+xlim([0,100])
+title("Vectors")
 xlabel("Frequency [Hz]")
-ylabel("Weight")
+ylabel("CRM weight")
 set(gca, 'tickdir','out');
 legend('HPC', 'mPFC', 'Location','northwest')
-text(-20,6.4e-4, "C", 'FontSize', 16)
-
-subplot(2,3,3)
-plot(X'*w_xCCA, 'color', col1)
-hold on
-plot(Y'*w_yCCA, 'color', col2)
-title("CCA Components")
-xlim([2100,2200])
-xlabel("Time [s]")
+ax = gca
+box(ax,'off')
+text(-20,8.3, "C", 'FontSize', 16)
+axes('Position',[0.51 0.635 0.1, 0.09])
+box on
+plot(f,w_xCCA*10000, 'o-', 'color', col1)
+hold on;
+plot(f,w_yCCA*10000, 'o-', 'color', col2)
+ylabel({'CCA'; 'weight'})
 set(gca, 'tickdir','out');
-legend('HPC', 'mPFC', 'Location','southwest')
-text(2075, 0.0205, "D", 'FontSize', 16)
+ax = gca
+box(ax,'off')
 
 subplot(2,3,5)
-plot(f,w_xCRM, 'o-', 'color', col1)
+plot(100*X'*w_xCRM, 'o-','color', col1)
 hold on
-plot(f,w_yCRM, 'o-', 'color', col2)
-plot([0,110],[0,0],'k--')
-title("CRM Vectors")
-xlabel("Frequency [Hz]")
-ylabel("Weight")
-set(gca, 'tickdir','out');
-legend('HPC', 'mPFC', 'Location','southeast')
-text(-20,2.8e-3, "E", 'FontSize', 16)
-
-subplot(2,3,6)
-plot(X'*w_xCRM, 'color', col1)
-hold on
-plot(Y'*w_yCRM, 'color', col2)
-title("CRM Components")
+plot(100*Y'*w_yCRM, 'o-','color', col2)
+plot([2100,2200],[0,0],['k--'])
+ylabel("CRM components")
 xlabel("Time [s]")
 set(gca, 'tickdir','out');
-xlim([2100,2200])
-legend('HPC', 'mPFC', 'Location','southwest')
-text(2075, 0.05, "F", 'FontSize', 16)
-%exportgraphics(figure(1), 'HPC_mPFC_spec.pdf');
-
-toc
-
-%% Against behavior
-load('VT1.mat')
-
-% t comes from the spectrum. 4813 time points in seconds
-tt = (Timestamps' - min(TimeStamps))*1e-6; % From behavior, measured in mus.
-%scatter(ExtractedX', ExtractedY', '.')
-
-positionX = [];
-positionY = [];
-for timepoint = t
-    [~, idx] = min( (tt - timepoint).^2 );
-    positionX = [positionX, ExtractedX(median(idx))];
-    positionY = [positionY, ExtractedY(median(idx))];
-end
-
-figure(2)
-
-subplot(1,2,1)
-ccaresult = X'*w_xCCA;
-ccaresult = smoothSpatial([positionX; positionY]', ccaresult, 10);
-ccaresult = (ccaresult - mean(ccaresult)) ./ std(ccaresult);
-scatter(positionX, positionY, 100, ccaresult, '.')
-caxis([-2.5,2.5])
-xlim([180,680])
-ylim([40,450])
-xlabel("X position in the maze")
-ylabel("Y position in the maze")
-title("CCA")
+xlim([2100,2160])
+text(2087, 5.5, "D", 'FontSize', 16)
+ylim([-15, 4])
+ax = gca
+box(ax,'off')
+axes('Position',[0.51 0.2 0.1, 0.1])
+box on
+plot(f, Y*(Y'*w_yCRM) ./ std(Y*(Y'*w_yCRM)),'o-')
+hold on
+plot(f, X*(X'*w_xCRM) ./ std(X*(X'*w_xCRM)),'o-')
+plot([0,100],[0,0],'k--')
+xlabel("Frequency [Hz]")
+ylabel("Loadings")
 set(gca, 'tickdir','out');
-b=colorbar;
-b.Label.String = 'Weight (z-scored)';
-text(50, 470, "A", 'FontSize', 16)
+ax = gca
+box(ax,'off')
 
-
-subplot(1,2,2)
+subplot(2,3,3)
 crmresult = (X'*w_xCRM) + (Y'*w_yCRM);
 crmresult = smoothSpatial([positionX; positionY]', crmresult, 10);
 crmresult = (crmresult - mean(crmresult)) ./ std(crmresult);
@@ -179,10 +157,33 @@ ylabel("Y position in the maze")
 title("CRM")
 set(gca, 'tickdir','out');
 b=colorbar;
-b.Label.String = 'Weight (z-scored)';
-text(50, 470, "B", 'FontSize', 16)
+b.Label.String = 'Component (z-scored)';
+text(50, 480, "E", 'FontSize', 16)
 
-exportgraphics(figure(2), 'HPC_mPFC_maze.pdf');
+subplot(2,3,6)
+ccaresult = X'*w_xCCA;
+ccaresult = smoothSpatial([positionX; positionY]', ccaresult, 10);
+ccaresult = (ccaresult - mean(ccaresult)) ./ std(ccaresult);
+scatter(positionX, positionY, 100, ccaresult, '.')
+caxis([-2.5,2.5])
+xlim([180,680])
+ylim([40,450])
+xlabel("X position in the maze")
+ylabel("Y position in the maze")
+title("CCA")
+set(gca, 'tickdir','out');
+b=colorbar;
+b.Label.String = 'Component (z-scored)';
+text(50, 490, "F", 'FontSize', 16)
+
+annotation('arrow', [0.80, 0.76], [0.90, 0.87]);
+
+%exportgraphics(figure(1), 'HPC_mPFC_spec.pdf');
+
+
+%%
+toc
+
 
 %% Coherence
 
