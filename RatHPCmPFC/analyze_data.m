@@ -74,6 +74,7 @@ col2 = "#f35b04";
 figure(1),clf;
 subplot(2,3,1)
 imagesc(t, f, X)
+axis xy
 a=colorbar;
 caxis([-10,20])
 a.Label.String = 'log(Power)'
@@ -81,10 +82,11 @@ title("Spectrogram of HPC")
 ylabel("Frequency [Hz]")
 xlabel("Time [s]")
 set(gca, 'tickdir','out');
-text(-500,-10, "A", 'FontSize', 16)
+text(-500,110, "a", 'FontSize', 16)
 
-subplot(2,3,4)
+subplot(2,3,2)
 imagesc(t, f, Y)
+axis xy
 b=colorbar;
 caxis([-10,20])
 b.Label.String = 'log(Power)'
@@ -92,24 +94,23 @@ title("Spectrogram of mPFC")
 xlabel("Time [s]")
 ylabel("Frequency [Hz]")
 set(gca, 'tickdir','out');
-text(-500,-10, "B", 'FontSize', 16)
+text(-500,110, "b", 'FontSize', 16)
 
-subplot(2,3,2)
+subplot(2,3,3)
 plot(f, w_xCRM*1000, 'o-', 'color', col1)
 hold on
 plot(f, w_yCRM*1000, 'o-', 'color', col2)
 plot([0,110], [0,0],'k--')
 ylim([-8, 7])
 xlim([0,100])
-title("Vectors")
 xlabel("Frequency [Hz]")
 ylabel("CRM weight")
 set(gca, 'tickdir','out');
 legend('HPC', 'mPFC', 'Location','northwest')
 ax = gca
 box(ax,'off')
-text(-20,8.3, "C", 'FontSize', 16)
-axes('Position',[0.51 0.635 0.1, 0.09])
+text(-20,8.3, "c", 'FontSize', 16)
+axes('Position',[0.785 0.63 0.1, 0.09])
 box on
 plot(f,w_xCCA*10000, 'o-', 'color', col1)
 hold on;
@@ -119,7 +120,7 @@ set(gca, 'tickdir','out');
 ax = gca
 box(ax,'off')
 
-subplot(2,3,5)
+subplot(2,3,4)
 plot(100*X'*w_xCRM, 'o-','color', col1)
 hold on
 plot(100*Y'*w_yCRM, 'o-','color', col2)
@@ -128,23 +129,23 @@ ylabel("CRM components")
 xlabel("Time [s]")
 set(gca, 'tickdir','out');
 xlim([2100,2160])
-text(2087, 5.5, "D", 'FontSize', 16)
+text(2087, 5.5, "d", 'FontSize', 16)
 ylim([-15, 4])
 ax = gca
 box(ax,'off')
-axes('Position',[0.51 0.2 0.1, 0.1])
+axes('Position',[0.22 0.2 0.1, 0.1])
 box on
-plot(f, Y*(Y'*w_yCRM) ./ std(Y*(Y'*w_yCRM)),'o-')
+plot(f, Y*(Y'*w_yCRM) ./ std(Y*(Y'*w_yCRM)),'o-', 'color', col2)
 hold on
-plot(f, X*(X'*w_xCRM) ./ std(X*(X'*w_xCRM)),'o-')
+plot(f, X*(X'*w_xCRM) ./ std(X*(X'*w_xCRM)),'o-', 'color', col1)
 plot([0,100],[0,0],'k--')
 xlabel("Frequency [Hz]")
-ylabel("Loadings")
+ylabel({'CRM'; 'Loading'})
 set(gca, 'tickdir','out');
 ax = gca
 box(ax,'off')
 
-subplot(2,3,3)
+subplot(2,3,5)
 crmresult = (X'*w_xCRM) + (Y'*w_yCRM);
 crmresult = smoothSpatial([positionX; positionY]', crmresult, 10);
 crmresult = (crmresult - mean(crmresult)) ./ std(crmresult);
@@ -154,11 +155,10 @@ xlim([180,680])
 ylim([40,450])
 xlabel("X position in the maze")
 ylabel("Y position in the maze")
-title("CRM")
 set(gca, 'tickdir','out');
 b=colorbar;
-b.Label.String = 'Component (z-scored)';
-text(50, 480, "E", 'FontSize', 16)
+b.Label.String = 'CRM Component (z-scored)';
+text(50, 480, "e", 'FontSize', 16)
 
 subplot(2,3,6)
 ccaresult = X'*w_xCCA;
@@ -170,13 +170,12 @@ xlim([180,680])
 ylim([40,450])
 xlabel("X position in the maze")
 ylabel("Y position in the maze")
-title("CCA")
 set(gca, 'tickdir','out');
 b=colorbar;
-b.Label.String = 'Component (z-scored)';
-text(50, 490, "F", 'FontSize', 16)
+b.Label.String = 'CCA Component (z-scored)';
+text(50, 490, "f", 'FontSize', 16)
 
-annotation('arrow', [0.80, 0.76], [0.90, 0.87]);
+annotation('arrow', [0.52, 0.48], [0.43, 0.4]);
 
 %exportgraphics(figure(1), 'HPC_mPFC_spec.pdf');
 
