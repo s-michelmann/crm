@@ -6,7 +6,7 @@ tic % 8850 seconds
 rng(1)
 
 figure(1), clf;
-
+yladiblree a sh la
 set(gca,'fontsize',20)
 
 Nobservations = 10000;
@@ -33,10 +33,6 @@ for noise = 0.05:0.5:10
         
         [r_wx, r_wy, r_lam, wxcxywy, wxdxywy, wxcxxwx, wycyywy] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
         
-        [w_xC, w_yC, lbd3C] = compute_weights(C_xx,C_yy,C_xy, D_xy, 1);
-        (w_xC'*C_xy*w_yC).^2;
-        (w_xC'*D_xy*w_yC).^2;
-        
         w_x = r_wx(:,1); % This is the best weight vector
         w_y = r_wy(:,1);
 
@@ -52,7 +48,7 @@ for noise = 0.05:0.5:10
 
     figure(1)
 
-    subplot(1,3,1), hold on;
+    subplot(3,3,1), hold on;
     mu = mean(data(1,:));
     err = std(data(1,:)) / sqrt(Nrepeats);
     errorbar(noise, mu, err, 'o', 'MarkerFaceColor', "#0072BD", 'Color',"#0072BD") % CRM result for best corr (max)
@@ -60,7 +56,7 @@ for noise = 0.05:0.5:10
     err = std(data(3,:)) / sqrt(Nrepeats);
     errorbar(noise, mu, err, 'o', 'MarkerFaceColor', "#77AC30", 'Color',"#77AC30") % CCA zero for best corr
 
-    subplot(1,3,2), hold on;
+    subplot(3,3,2), hold on;
     mu = mean(data(2,:));
     err = std(data(2,:)) / sqrt(Nrepeats);
     errorbar(noise, mu, err, 'o', 'MarkerFaceColor', "#0072BD", 'Color',"#0072BD") % CRM result for D (=0)
@@ -70,7 +66,7 @@ for noise = 0.05:0.5:10
 end
 
 %%
-subplot(1,3,1)
+subplot(3,3,1)
 ylim([-0.1,1.1])
 xlim([-0.1, 10.1])
 xlabel("Noise \alpha")
@@ -78,7 +74,7 @@ ylabel("w_xC_{xy}w_y")
 set(gca, 'tickdir','out');
 legend('CRM', 'CCA', 'Location','northeast')
 
-subplot(1,3,2)
+subplot(3,3,2)
 ylim([-0.1,0.7])
 xlim([-0.1, 10.1])
 xlabel("Noise")
@@ -104,13 +100,13 @@ for lbd3 = (min(r_lam)-1): 0.01: (max(r_lam)+1)
         correlation(i) = w_x'*C_xy*w_y;
     end
     
-    subplot(1,3,3)
+    subplot(3,3,3)
     scatter(lbd3*ones(Nsubjects,1), constraint, 10, correlation, "filled")
     hold on;
 end
 
 %Check the roots
-subplot(1,3,3)
+subplot(3,3,3)
 plot(r_lam, 0, 'o', 'MarkerFaceColor', 'r', 'MarkerEdgeColor','r')
 plot([min(r_lam)-1,max(r_lam)+1], [0,0], 'k--')
 xlabel("\lambda_3")
@@ -119,21 +115,156 @@ a=colorbar;
 a.Label.String = 'w_xC_{xy}w_y';
 caxis([-1,1])
 xlim([ min(r_lam)-1, max(r_lam)+1])
+set(gca, 'tickdir','out');
 
-subplot(1,3,3)
+subplot(3,3,3)
 set(gca,'fontsize',17)
-text(-4.8,0.41, "C", 'FontSize', 21)
+text(-3,1.1, "c", 'FontSize', 21)
 
-subplot(1,3,1)
+subplot(3,3,1)
 set(gca,'fontsize',17)
-text(-2.5, 1.1, "A", 'FontSize', 21)
+text(-2.5, 1.1, "a", 'FontSize', 21)
 
-subplot(1,3,2)
+subplot(3,3,2)
 set(gca,'fontsize',17)
-text(-3.0, 0.7, "B", 'FontSize', 21)
+text(-3.0, 0.7, "b", 'FontSize', 21)
 
 set(gcf, 'Units', 'Normalized', 'OuterPosition', [0, 0.04, .7, 0.3]);
 
-%exportgraphics(figure(1), 'simulation1.pdf');
+
+
+
+T = 2000; % Number of observations.
+N = 100;  % Variate, eg. recorded EEG channels
+t = 1:T;
+
+X = randn(N, T);
+Y = randn(N, T);
+
+hidden_signal = 2*(sin(t/100)>0) - 1; % Representation of interest.
+for i = 1:10:N
+    X(i, :) = X(i, :) + hidden_signal;
+    Y(i, :) = Y(i, :) + hidden_signal;
+end
+
+A0 = 2; % Dominating signal over the representation of interest.
+for i = 1:N
+    X(i,:) = X(i,:) + A0*sin(t/10);
+    Y(i,:) = Y(i,:) + A0*sin(t/10);
+end
+
+fs = 1;
+Xfilt = zeros(N, T);
+Yfilt = zeros(N, T);
+for i = 1:N
+    Xfilt(i,:) = bandpass(X(i,:), [0.015 0.020],fs);
+    Yfilt(i,:) = bandpass(Y(i,:), [0.015 0.020],fs);
+end
+
+%% Perform the analysis
+C_xy = X*Y';
+C_xx = X*X';
+C_yy = Y*Y';
+D_xy = Xfilt*Yfilt';
+
+[r_wxCCA, r_wyCCA, r_lamCCA, wxcxywyCCA, wxdxywyCCA, wxcxxwxCCA, wycyywyCCA] = compute_weights_full(C_xx, C_yy, C_xy, 0*C_xy);
+
+[r_wxCRM, r_wyCRM, r_lamCRM, wxcxywyCRM, wxdxywyCRM, wxcxxwxCRM, wycyywyCRM] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
+
+%%
+w_xCCA = r_wxCCA(:,1);
+w_xCRM = r_wxCRM(:,1);
+
+w_yCCA = r_wyCCA(:,1);
+w_yCRM = r_wyCRM(:,1);
+
+subplot(3,3,4)
+imagesc(X)
+title("Data from area A")
+ylabel("EEG electrode #")
+a=colorbar;
+caxis([-6,6])
+xlim([0,1000])
+a.Label.String = 'Signal [\mu V]';
+xlabel("Time [ms]")
+set(gca, 'tickdir','out');
+ax = gca
+box(ax,'off')
+text(-100,-10, "d", 'FontSize', 21)
+
+subplot(3,3,5)
+imagesc(Y)
+title("Data from area B")
+ylabel("EEG electrode #")
+b=colorbar;
+caxis([-6,6])
+xlim([0,1000])
+b.Label.String = 'Signal [\mu V]';
+xlabel("Time [ms]")
+set(gca, 'tickdir','out');
+ax = gca
+box(ax,'off')
+text(-100,-10, "e", 'FontSize', 21)
+
+subplot(3,3,6)
+plot(w_xCCA*1e4,'-o')
+hold on
+plot(w_yCCA*1e4,'-o')
+plot([0,N],[0,0],'k--')
+xlabel("EEG electrode #")
+ylabel("CCA weight")
+set(gca, 'tickdir','out');
+ylim([-3, 3])
+legend('Area A', 'Area B', 'Location','northeast')
+ax = gca
+box(ax,'off')
+text(-10,3.6e-4, "c", 'FontSize', 21)
+
+subplot(3,3,7)
+plot(X'*w_xCCA*10)
+hold on
+plot(Y'*w_yCCA*10)
+ylabel("CCA component")
+xlabel("Time [ms]")
+set(gca, 'tickdir','out');
+plot(hidden_signal*std(X'*w_xCRM),'k-.', 'LineWidth', 2)
+ylim([-0.5, 0.7])
+xlim([0,1000])
+legend('Area A', 'Area B', 'Signal', 'Location','northeast')
+ax = gca
+box(ax,'off')
+text(-200,0.114, "d", 'FontSize', 21)
+
+subplot(3,3,8)
+plot(w_xCRM*1e3, '-o')
+hold on
+plot(w_yCRM*1e3, '-o')
+plot([0,N],[0,0],'k--')
+xlabel("EEG electrode #")
+ylabel("CRM weight")
+set(gca, 'tickdir','out');
+legend('Area A', 'Area B', 'Location','northeast')
+ylim([-4, 4])
+ax = gca
+box(ax,'off')
+text(-10,5e-3, "e", 'FontSize', 21)
+
+subplot(3,3,9)
+plot(X'*w_xCRM*10)
+hold on
+plot(Y'*w_yCRM*10)
+title("CRM Components")
+xlabel("Time [ms]")
+set(gca, 'tickdir','out');
+plot(hidden_signal*std(X'*w_xCRM),'k-.', 'LineWidth', 2)
+ylim([-0.5, 0.7])
+xlim([0,1000])
+text(-200,0.118, "f", 'FontSize', 21)
+ax = gca
+box(ax,'off')
+legend('Area A', 'Area B', 'Signal', 'Location','northeast')
+
+
+%exportgraphics(figure(1), 'fig2.pdf');
 
 toc

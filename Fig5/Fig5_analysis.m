@@ -177,26 +177,11 @@ text(50, 490, "f", 'FontSize', 16)
 
 annotation('arrow', [0.52, 0.48], [0.43, 0.4]);
 
-%exportgraphics(figure(1), 'HPC_mPFC_spec.pdf');
+%exportgraphics(figure(1), 'fig5.pdf');
 
 
 %%
 toc
-
-
-%% Coherence
-
-figure(3),clf;
-[cxy,fc] = mscohere(x,y,hamming(2000),500,nff); % 500 samples of overlap
-plot(fc*fs/(2*3.14), cxy, 'b-')
-hold on;
-plot(f,w_yCCA*2*1e3, 'r-')
-plot(f,-1*w_yCRM*1e2, 'g-')
-plot([0,100],[0,0],'k--')
-xlim([0,150])
-xlabel("Frequency [Hz]")
-legend(["Coherence", "wCCA", "wCRM"])
-
 
 %% Helpers
 function newData = smoothSpatial(oldData, behaviorData, numSmooth)
