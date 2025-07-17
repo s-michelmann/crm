@@ -1,13 +1,11 @@
 close all;
 clear all;
 
-tic % 8850 seconds
+tic % around 3h use
 
 rng(1)
 
 figure(1), clf;
-yladiblree a sh la
-set(gca,'fontsize',20)
 
 Nobservations = 10000;
 Nsubjects = 10;
@@ -69,22 +67,27 @@ end
 subplot(3,3,1)
 ylim([-0.1,1.1])
 xlim([-0.1, 10.1])
-xlabel("Noise \alpha")
-ylabel("w_xC_{xy}w_y")
+xlabel("Noise")
+ylabel("Correlation w_xC_{xy}w_y")
 set(gca, 'tickdir','out');
 legend('CRM', 'CCA', 'Location','northeast')
+text(-2.5, 1.1, "a", 'FontSize', 21)
 
 subplot(3,3,2)
 ylim([-0.1,0.7])
 xlim([-0.1, 10.1])
 xlabel("Noise")
-ylabel("w_xD_{xy}w_y")
+ylabel("Constraint w_xD_{xy}w_y")
 set(gca, 'tickdir','out');
 legend('CRM', 'CCA', 'Location','northeast')
+text(-2.8, 0.7, "b", 'FontSize', 21)
+
 
 [r_wx, r_wy, r_lam, wxcxywy, wxdxywy, wxcxxwx, wycyywy] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
 
 %%
+
+% Add plot of the roots
 for lbd3 = (min(r_lam)-1): 0.01: (max(r_lam)+1)
     M = inv(C_xx)*(C_xy+lbd3*D_xy)*inv(C_yy)* ((C_xy+lbd3*D_xy)');
     [W,eigvalues] = eig(M, 'vector');
@@ -105,37 +108,21 @@ for lbd3 = (min(r_lam)-1): 0.01: (max(r_lam)+1)
     hold on;
 end
 
-%Check the roots
 subplot(3,3,3)
 plot(r_lam, 0, 'o', 'MarkerFaceColor', 'r', 'MarkerEdgeColor','r')
 plot([min(r_lam)-1,max(r_lam)+1], [0,0], 'k--')
 xlabel("\lambda_3")
-ylabel("w_xD_{xy}w_y")
+ylabel("Constraint w_xD_{xy}w_y")
 a=colorbar;
-a.Label.String = 'w_xC_{xy}w_y';
+a.Label.String = 'Correlation w_xC_{xy}w_y';
 caxis([-1,1])
 xlim([ min(r_lam)-1, max(r_lam)+1])
 set(gca, 'tickdir','out');
+text(-4.5,0.4, "c", 'FontSize', 21)
 
-subplot(3,3,3)
-set(gca,'fontsize',17)
-text(-3,1.1, "c", 'FontSize', 21)
-
-subplot(3,3,1)
-set(gca,'fontsize',17)
-text(-2.5, 1.1, "a", 'FontSize', 21)
-
-subplot(3,3,2)
-set(gca,'fontsize',17)
-text(-3.0, 0.7, "b", 'FontSize', 21)
-
-set(gcf, 'Units', 'Normalized', 'OuterPosition', [0, 0.04, .7, 0.3]);
-
-
-
-
-T = 2000; % Number of observations.
-N = 100;  % Variate, eg. recorded EEG channels
+%% Lower three plots
+T = 2000; % Total number of observations.
+N = 100;  % Total variate number, eg. recorded EEG channels
 t = 1:T;
 
 X = randn(N, T);
@@ -180,89 +167,89 @@ w_yCRM = r_wyCRM(:,1);
 
 subplot(3,3,4)
 imagesc(X)
-title("Data from area A")
-ylabel("EEG electrode #")
+title("Data A")
+ylabel("Variate")
 a=colorbar;
 caxis([-6,6])
 xlim([0,1000])
-a.Label.String = 'Signal [\mu V]';
-xlabel("Time [ms]")
+a.Label.String = 'Signal [a.u.]';
+xlabel("Obseration")
 set(gca, 'tickdir','out');
 ax = gca
 box(ax,'off')
-text(-100,-10, "d", 'FontSize', 21)
+text(-300,-10, "d", 'FontSize', 21)
 
 subplot(3,3,5)
 imagesc(Y)
-title("Data from area B")
-ylabel("EEG electrode #")
+title("Data  B")
+ylabel("Variate number")
 b=colorbar;
 caxis([-6,6])
 xlim([0,1000])
-b.Label.String = 'Signal [\mu V]';
-xlabel("Time [ms]")
+b.Label.String = 'Signal [a.u.]';
+xlabel("Observation number")
 set(gca, 'tickdir','out');
 ax = gca
 box(ax,'off')
-text(-100,-10, "e", 'FontSize', 21)
+text(-350,-10, "e", 'FontSize', 21)
 
 subplot(3,3,6)
 plot(w_xCCA*1e4,'-o')
 hold on
 plot(w_yCCA*1e4,'-o')
 plot([0,N],[0,0],'k--')
-xlabel("EEG electrode #")
+xlabel("Variate number")
 ylabel("CCA weight")
 set(gca, 'tickdir','out');
 ylim([-3, 3])
-legend('Area A', 'Area B', 'Location','northeast')
+legend('Data A', 'Data B', 'Location','northeast')
 ax = gca
 box(ax,'off')
-text(-10,3.6e-4, "c", 'FontSize', 21)
+text(-20,3.6, "f", 'FontSize', 21)
 
 subplot(3,3,7)
 plot(X'*w_xCCA*10)
 hold on
 plot(Y'*w_yCCA*10)
 ylabel("CCA component")
-xlabel("Time [ms]")
+xlabel("Observation number")
 set(gca, 'tickdir','out');
-plot(hidden_signal*std(X'*w_xCRM),'k-.', 'LineWidth', 2)
-ylim([-0.5, 0.7])
+plot(-hidden_signal*std(X'*w_xCRM)*10,'k-.', 'LineWidth', 2)
+ylim([-0.5, 0.8])
 xlim([0,1000])
-legend('Area A', 'Area B', 'Signal', 'Location','northeast')
+legend('Data A', 'Data B', 'Representation of interest', 'Location','northwest')
 ax = gca
 box(ax,'off')
-text(-200,0.114, "d", 'FontSize', 21)
+text(-250,0.82, "g", 'FontSize', 21)
 
 subplot(3,3,8)
 plot(w_xCRM*1e3, '-o')
 hold on
 plot(w_yCRM*1e3, '-o')
 plot([0,N],[0,0],'k--')
-xlabel("EEG electrode #")
+xlabel("Variate number")
 ylabel("CRM weight")
 set(gca, 'tickdir','out');
-legend('Area A', 'Area B', 'Location','northeast')
+legend('Data A', 'Data B', 'Location','northeast')
 ylim([-4, 4])
 ax = gca
 box(ax,'off')
-text(-10,5e-3, "e", 'FontSize', 21)
+text(-27,4.3, "h", 'FontSize', 21)
 
 subplot(3,3,9)
 plot(X'*w_xCRM*10)
 hold on
 plot(Y'*w_yCRM*10)
-title("CRM Components")
-xlabel("Time [ms]")
+ylabel("CRM Component")
+xlabel("Observation number")
 set(gca, 'tickdir','out');
-plot(hidden_signal*std(X'*w_xCRM),'k-.', 'LineWidth', 2)
-ylim([-0.5, 0.7])
+plot(-hidden_signal*std(X'*w_xCRM)*10,'k-.', 'LineWidth', 2)
+ylim([-0.5, 0.8])
 xlim([0,1000])
-text(-200,0.118, "f", 'FontSize', 21)
 ax = gca
 box(ax,'off')
-legend('Area A', 'Area B', 'Signal', 'Location','northeast')
+legend('Data A', 'Data B', 'Representation of interest', 'Location','northwest')
+text(-200,0.8, "i", 'FontSize', 21)
 
 
 %exportgraphics(figure(1), 'fig2.pdf');

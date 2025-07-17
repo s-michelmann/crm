@@ -1,7 +1,7 @@
 close all;
 clear all;
 
-tic % around 3h
+tic % around 3h use
 
 rng(1)
 
@@ -114,7 +114,7 @@ plot([min(r_lam)-1,max(r_lam)+1], [0,0], 'k--')
 xlabel("\lambda_3")
 ylabel("Constraint w_xD_{xy}w_y")
 a=colorbar;
-a.Label.String = 'w_xC_{xy}w_y';
+a.Label.String = 'Correlation w_xC_{xy}w_y';
 caxis([-1,1])
 xlim([ min(r_lam)-1, max(r_lam)+1])
 set(gca, 'tickdir','out');
@@ -187,7 +187,7 @@ b=colorbar;
 caxis([-6,6])
 xlim([0,1000])
 b.Label.String = 'Signal [a.u.]';
-xlabel("Observation number")
+xlabel("Observation")
 set(gca, 'tickdir','out');
 ax = gca
 box(ax,'off')
@@ -234,13 +234,13 @@ legend('Data A', 'Data B', 'Location','northeast')
 ylim([-4, 4])
 ax = gca
 box(ax,'off')
-text(-25,4.3, "h", 'FontSize', 21)
+text(-27,4.3, "h", 'FontSize', 21)
 
 subplot(3,3,9)
 plot(X'*w_xCRM*10)
 hold on
 plot(Y'*w_yCRM*10)
-title("CRM Components")
+ylabel("CRM Component")
 xlabel("Observation number")
 set(gca, 'tickdir','out');
 plot(-hidden_signal*std(X'*w_xCRM)*10,'k-.', 'LineWidth', 2)
