@@ -67,3 +67,14 @@ function [w_x, w_y, lambda3] = compute_weights(C_xx, C_yy,C_xy, D_xy, f, gamma)
     end
 
 end
+
+
+function [tst] = foo2(C_xx, C_yy, C_xy, D_xy, lbd3, f)
+    % calculate the f largest eigenvalues only!
+    M = inv(C_xx)*(C_xy+lbd3*D_xy)*inv(C_yy)* ((C_xy+lbd3*D_xy)');
+    [W,D] = eigs(M,f);
+    w_x = W(:,f);
+    w_x = w_x./sqrt(w_x'*C_xx*w_x);
+    w_y = inv(C_yy)*(C_xy+lbd3*D_xy)'*w_x;
+    tst = abs(w_x'*D_xy*w_y);
+end
