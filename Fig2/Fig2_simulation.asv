@@ -71,7 +71,7 @@ xlabel("Noise")
 ylabel("Correlation w_xC_{xy}w_y")
 set(gca, 'tickdir','out');
 legend('CRM', 'CCA', 'Location','northeast')
-text(-2.7, 1.1, "a", 'FontSize', 21)
+text(-2.5, 1.1, "a", 'FontSize', 21)
 
 subplot(3,3,2)
 ylim([-0.1,0.7])
@@ -80,7 +80,7 @@ xlabel("Noise")
 ylabel("Constraint w_xD_{xy}w_y")
 set(gca, 'tickdir','out');
 legend('CRM', 'CCA', 'Location','northeast')
-text(-2.8, 0.72, "b", 'FontSize', 21)
+text(-2.8, 0.7, "b", 'FontSize', 21)
 
 
 [r_wx, r_wy, r_lam, wxcxywy, wxdxywy, wxcxxwx, wycyywy] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
@@ -118,7 +118,7 @@ a.Label.String = 'Correlation w_xC_{xy}w_y';
 caxis([-1,1])
 xlim([ min(r_lam)-1, max(r_lam)+1])
 set(gca, 'tickdir','out');
-text(-5.0,0.4, "c", 'FontSize', 21)
+text(-4.5,0.4, "c", 'FontSize', 21)
 
 %% Lower three plots
 T = 2000; % Total number of observations.
@@ -173,11 +173,11 @@ a=colorbar;
 caxis([-6,6])
 xlim([0,1000])
 a.Label.String = 'Signal [a.u.]';
-xlabel("Observation")
+xlabel("Obseration")
 set(gca, 'tickdir','out');
 ax = gca
 box(ax,'off')
-text(-350,-5, "d", 'FontSize', 21)
+text(-300,-10, "d", 'FontSize', 21)
 
 subplot(3,3,5)
 plot(w_xCCA*1e4,'-o')
@@ -191,7 +191,7 @@ ylim([-3, 3])
 legend('Data A', 'Data B', 'Location','northeast')
 ax = gca
 box(ax,'off')
-text(-25,3.6, "e", 'FontSize', 21)
+text(-20,3.6, "e", 'FontSize', 21)
 
 subplot(3,3,6)
 plot(w_xCRM*1e3, '-o')
@@ -205,7 +205,7 @@ legend('Data A', 'Data B', 'Location','northeast')
 ylim([-4, 4])
 ax = gca
 box(ax,'off')
-text(-25,4.3, "f", 'FontSize', 21)
+text(-27,4.3, "f", 'FontSize', 21)
 
 subplot(3,3,7)
 imagesc(Y)
@@ -219,7 +219,7 @@ xlabel("Observation")
 set(gca, 'tickdir','out');
 ax = gca
 box(ax,'off')
-text(-350,0, "g", 'FontSize', 21)
+text(-350,-10, "g", 'FontSize', 21)
 
 subplot(3,3,8)
 plot(X'*w_xCCA*10)
@@ -246,10 +246,10 @@ set(gca, 'tickdir','out');
 plot(-hidden_signal*std(X'*w_xCRM)*10,'k-.', 'LineWidth', 2)
 ylim([-0.5, 0.8])
 xlim([0,1000])
-ax = gca;
+ax = gcap
 box(ax,'off')
 legend('Data A', 'Data B', 'Representation of interest', 'Location','northwest')
-text(-270,0.8, "i", 'FontSize', 21)
+text(-200,0.8, "i", 'FontSize', 21)
 
 
 %exportgraphics(figure(1), 'fig2.pdf');
