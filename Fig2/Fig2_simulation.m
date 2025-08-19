@@ -219,7 +219,6 @@ xlabel("Observation")
 set(gca, 'tickdir','out');
 ax = gca
 box(ax,'off')
-text(-350,0, "g", 'FontSize', 21)
 
 subplot(3,3,8)
 plot(X'*w_xCCA*10)
@@ -234,7 +233,6 @@ xlim([0,1000])
 legend('Data A', 'Data B', 'Representation of interest', 'Location','northwest')
 ax = gca
 box(ax,'off')
-text(-250,0.82, "h", 'FontSize', 21)
 
 subplot(3,3,9)
 plot(X'*w_xCRM*10)
@@ -249,7 +247,6 @@ xlim([0,1000])
 ax = gca;
 box(ax,'off')
 legend('Data A', 'Data B', 'Representation of interest', 'Location','northwest')
-text(-270,0.8, "i", 'FontSize', 21)
 
 
 %exportgraphics(figure(1), 'fig2.pdf');

@@ -46,7 +46,7 @@ T = filter.*X;
 D_xy = S*T';
 a = norm(C_xy,'fro')/norm(D_xy,'fro');
 D_xy = a*D_xy;
-
+m
 [r_wxCRM, r_wyCRM, r_lamCRM, wxcxywyCRM, wxdxywyCRM, wxcxxwxCRM, wycyywyCRM] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
 
 
@@ -193,3 +193,29 @@ function newData = smoothSpatial(oldData, behaviorData, numSmooth)
         newData(i) = sum(closeData)/length(closeData);
     end
 end
+
+
+
+%% Test for statistcs
+
+figure(2),clf;
+
+N_btstrps = 10000;
+pos = sqrt( (positionX - 600).^2 + (positionY-250).^2 ); % distance from home cage
+result = crmresult;
+
+cc = corrcoef(pos, result);
+bestc = cc(2,1);
+
+for btstrp_idx = 1:N_btstrps
+    cc = corrcoef(circshift(pos, randi(length(pos))), result);
+    nulldistro(btstrp_idx) = cc(2,1);
+end
+
+p = (sum(bestc < nulldistro)+1) / N_btstrps;
+
+hist(nulldistro,-0.2:0.01:0.2)
+xlabel("corcoef(CRM; x-position in maze)")
+hold on;
+plot([bestc, bestc], [0,1000], 'r')
+title(p)
