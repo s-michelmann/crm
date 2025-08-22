@@ -46,7 +46,7 @@ T = filter.*X;
 D_xy = S*T';
 a = norm(C_xy,'fro')/norm(D_xy,'fro');
 D_xy = a*D_xy;
-m
+
 [r_wxCRM, r_wyCRM, r_lamCRM, wxcxywyCRM, wxdxywyCRM, wxcxxwxCRM, wycyywyCRM] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
 
 
@@ -146,7 +146,7 @@ ax = gca
 box(ax,'off')
 
 subplot(2,3,5)
-crmresult = (X'*w_xCRM) + (Y'*w_yCRM);
+crmresult = X'*w_xCRM;
 crmresult = smoothSpatial([positionX; positionY]', crmresult, 10);
 crmresult = (crmresult - mean(crmresult)) ./ std(crmresult);
 scatter(positionX, positionY, 100, crmresult, '.')
@@ -157,7 +157,7 @@ xlabel("X position in the maze")
 ylabel("Y position in the maze")
 set(gca, 'tickdir','out');
 b=colorbar;
-b.Label.String = 'CRM Component (z-scored)';
+b.Label.String = 'HPC CRM Component (z-scored)';
 text(50, 480, "e", 'FontSize', 16)
 
 subplot(2,3,6)
@@ -172,7 +172,7 @@ xlabel("X position in the maze")
 ylabel("Y position in the maze")
 set(gca, 'tickdir','out');
 b=colorbar;
-b.Label.String = 'CCA Component (z-scored)';
+b.Label.String = 'HPC CCA Component (z-scored)';
 text(50, 490, "f", 'FontSize', 16)
 
 annotation('arrow', [0.52, 0.48], [0.43, 0.4]);
@@ -180,7 +180,7 @@ annotation('arrow', [0.52, 0.48], [0.43, 0.4]);
 %exportgraphics(figure(1), 'fig5.pdf');
 
 
-%%
+%
 toc
 
 %% Helpers
@@ -194,15 +194,13 @@ function newData = smoothSpatial(oldData, behaviorData, numSmooth)
     end
 end
 
-
-
 %% Test for statistcs
 
 figure(2),clf;
 
 N_btstrps = 10000;
 pos = sqrt( (positionX - 600).^2 + (positionY-250).^2 ); % distance from home cage
-result = crmresult;
+result = ccaresult;
 
 cc = corrcoef(pos, result);
 bestc = cc(2,1);
