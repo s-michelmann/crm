@@ -1,5 +1,11 @@
 ### Summary
-This repository contains code to apply Canonical Representational MApping (CRM) to various simulations and datasets.
+This repository contains code to apply Canonical Representational Mapping (CRM) to various simulations and datasets.
+
+### Installation guide
+Download this repository, and add to your MATLAB search path. All figures and panels were created with MATLAB scripts. The typical run time for the ECoG analysis is a few hours, all other figures can be generated within a few minutes. A small demo to test the software on simulated data is part of `Fig2_simulation.m`
+
+## Requirements
+No non-standard hardware is required. No GPU is required. Code is confirmed to work on MATLAB R2024b and R2025a. We used the FieldTrip toolbox. To install MATLAB, follow the instructions on https://www.mathworks.com/help/install/index.html
 
 ### Repository Content
     .
@@ -14,12 +20,14 @@ This repository contains code to apply Canonical Representational MApping (CRM) 
 
 ## Dependencies
 
-Data for figure 2 can be found in: 
+Data for figure 3 can be found in: 
 Zada, Z., Nastase, S.A., Aubrey, B. et al. The “Podcast” ECoG dataset for modeling neural activity during natural language comprehension. Sci Data 12, 1135 (2025). https://doi.org/10.1038/s41597-025-05462-2
 
-Data for figure 3 are available from the authors of Reagh et al. on request: 
-
+Data for figure 4 are available from the authors of Reagh et al. on request: 
 Reagh, Z.M., Ranganath, C. Flexible reuse of cortico-hippocampal representations during encoding and recall of naturalistic events. Nat Commun 14, 1279 (2023). https://doi.org/10.1038/s41467-023-36805-5
+
+Data for figure 5 are available from the authors of Rosenblum et al. on request: 
+Rosenblum, H.L., Kim, S.H., Stout, J.J., Klintsova, A.Y., Griffin A.L. Choice Behaviors and Prefrontal–Hippocampal Coupling Are Disrupted in a Rat Model of Fetal Alcohol Spectrum Disorders. J Neuroscience 45, 10 (2025). https://doi.org/10.1523/JNEUROSCI.1241-24.2025
 
 ShadedErrorBar is from: 
 https://www.mathworks.com/matlabcentral/fileexchange/26311-raacampbell-shadederrorbar

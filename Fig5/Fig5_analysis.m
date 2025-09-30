@@ -200,7 +200,7 @@ figure(2),clf;
 
 N_btstrps = 10000;
 pos = sqrt( (positionX - 600).^2 + (positionY-250).^2 ); % distance from home cage
-result = ccaresult;
+result = X'*w_xCRM;
 
 cc = corrcoef(pos, result);
 bestc = cc(2,1);
