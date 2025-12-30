@@ -13,29 +13,34 @@ ROIactivities = nic_output.ROIactivities;
 [T,N] = size(ROIactivities);
 neural_data = double(ROIactivities( ismember(trialn, trials_use), :));
 
-%% z scoring
-for i = 1:375
-    neural_data(:,i) = (neural_data(:,i)) ./ std(neural_data(:,i));
-end
-
 %% Set rng() and load data
 rng(1);
 
 Datarange    = nansum(neural_data,2)>0;
-Neurons      = nansum(neural_data,1)>0;
-neural_data        = neural_data(Datarange,Neurons)';
+Neurons      = nansum(neural_data,1)>5;
+neural_data  = neural_data(Datarange,Neurons)';
 
-behavioral_data = [behavioralVariables.Position(Datarange), behavioralVariables.Position_X(Datarange), behavioralVariables.Velocity(Datarange), behavioralVariables.Yvelocity(Datarange), behavioralVariables.Xvelocity(Datarange), behavioralVariables.Evidence(Datarange), behavioralVariables.Choice(Datarange), behavioralVariables.ViewAngle(Datarange)]';
+for i = 1:sum(Neurons)
+    neural_data(i,:) = (neural_data(i,:) - mean(neural_data(i,:))) ./ std(neural_data(i,:));
+end
 
+behavioral_data = [behavioralVariables.Position(Datarange), ...
+    behavioralVariables.Position_X(Datarange), ...
+    behavioralVariables.Velocity(Datarange), ...
+    behavioralVariables.Yvelocity(Datarange), ...
+    behavioralVariables.Xvelocity(Datarange), ...
+    behavioralVariables.Evidence(Datarange), ...
+    behavioralVariables.Time(Datarange), ...
+    behavioralVariables.ViewAngle(Datarange),...
+    behavioralVariables.Choice(Datarange)]';
 
-for i = 1:8
-    behavioral_data(:,i) = (behavioral_data(:,i)) ./ std(behavioral_data(:,i));
+for i = 1:9
+    behavioral_data(i,:) = (behavioral_data(i,:) - mean(behavioral_data(i,:)))./ std(behavioral_data(i,:));
 end
 
 %% Run CRM
 % Idea1: task1 behavior vs neurons VS task2 behavior v neurons
 % Idea2: correct behavior vs neurons VS error task v neurons
-
 
 flag = behavioralVariables.ChoiceCorrect(Datarange) == 1;
 
@@ -50,21 +55,36 @@ C_xx = X*X';
 C_yy = Y*Y';
 D_xy = S*T';
 
-% warning('off','MATLAB:singularMatrix')
+%% warning('off','MATLAB:singularMatrix')
 
 tic
-[r_wx, r_wy, r_lam, wxcxywy, wxdxywy, wxcxxwx, wycyywy] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
+[w_x, w_y, lambda3] = compute_weights(C_xx, C_yy,C_xy, D_xy);
 toc
 
 %% analysis
 
-w_x = r_wx(:,1);
-w_y = r_wy(:,1);
-
+posy = behavioral_data(1,:);
+posx = behavioral_data(2,:);
+evi  = behavioral_data(6,:);
+tri = behavioralVariables.Trial(Datarange);
 corrcoef(w_x'*X, w_y'*Y)
+corrcoef(w_x'*S, w_y'*T)
 
-% evi = behavioralVariables.Evidence(Datarange);
-% behavioralVariables.PriorChoice(Datarange)
+figure(1)
+rx1 = mean(behavioralVariables.Position_X(Datarange));
+rx2 = std(behavioralVariables.Position_X(Datarange));
+ry1 = mean(behavioralVariables.Position(Datarange));
+ry2 = std(behavioralVariables.Position(Datarange));
 
+scatter(posy*ry2 + ry1, posx*rx2 + rx1, [], w_x'*neural_data)
+clim([-0.01,0.01])
+xlabel("Position of the mouse in cm")
+ylabel("Position of the mouse in cm")
+% subplot(2,1,2)
+% for t = unique(tri)'
+%     acc = w_x'*neural_data;
+%     plot(posy(tri==t), acc(tri==t))
+%     hold on;
+% end
 
 % last: Retina P vs movie, controlling for P v luminance
