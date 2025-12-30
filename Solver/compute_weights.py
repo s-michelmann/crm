@@ -34,11 +34,11 @@ def compute_weights(C_xx, C_yy, C_xy, D_xy, f=1, gamma=None):
     D_xy = np.array(D_xy, dtype=float, copy=True)
 
     n = C_xx.shape[0]
-    if not (C_xx.shape == C_yy.shape == C_xy.shape == D_xy.shape == (n, n)):
-        raise ValueError("All inputs must be square matrices of the same size.")
+    if not (C_xx.shape == C_yy.shape and C_xx.shape == C_yy.T.shape and C_xy.shape == D_xy.shape):
+        raise ValueError("Covariance matrices are not of correct size.")
 
     if f < 1 or f >= n:
-        raise ValueError("f must satisfy 1 <= f < n (ARPACK requirement).")
+        raise ValueError("f must satisfy 1 <= f < n.")
 
     # Regularization (mirrors: if nargin > 5)
     if gamma is not None:
