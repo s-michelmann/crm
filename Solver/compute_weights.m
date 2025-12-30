@@ -34,7 +34,7 @@ end
 function [tst] = foo2(C_xx, C_yy, C_xy, D_xy, lbd3, f)
     % calculate the f largest eigenvalues only!
     M = inv(C_xx)*(C_xy+lbd3*D_xy)*inv(C_yy)* ((C_xy+lbd3*D_xy)');
-    [W,D] = eigs(M,f);
+    [W,D] = eigs(M,f,'lr');
     w_x = W(:,f);
     w_x = w_x./sqrt(w_x'*C_xx*w_x);
     w_y = inv(C_yy)*(C_xy+lbd3*D_xy)'*w_x;
