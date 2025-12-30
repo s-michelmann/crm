@@ -1,13 +1,13 @@
 close all;
 clear all;
 
-tic %8h runtime
+tic %53h runtime
 
 rng(1)
 
 Nobservations = 10000;
 Nsubjects = 10;
-Nrepeats = 48;
+Nrepeats = 360; % Something divisible by 12
 Nrank = 8;
 
 all_results = zeros(Nrank, 8);
@@ -95,7 +95,7 @@ legend('CRM', 'parCCA', 'Location','northeast')
 text(-2.7, 1.1, "a", 'FontSize', 21)
 
 subplot(1,2,2), hold on;
-imagesc(1:8, 0.25:0.25:3, M)
+imagesc(1:8, 0.25:0.25:3, M*100)
 set(gca, 'YDir', 'normal')
 colorbar;
 xlabel("Rank of nuisance variable")
