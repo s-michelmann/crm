@@ -4,11 +4,12 @@ close all
 restoredefaultpath;
 homeDir  = getenv('HOME');
 ft_pth = fullfile(homeDir, 'Documents', 'fieldtrip'); % Construct the path to the Documents folder
+addpath(fullfile(ft_pth, 'external', 'mne'));
 
 addpath(ft_pth);
 ft_defaults;
 
-dir_code = "crm_canon_prev_word_10fold";
+dir_code = "crm_canon_prev_word_10fold_parCCA";
 %% define paths
 cwd_path = pwd;
 addpath(genpath(fileparts(cwd_path)));
@@ -143,6 +144,10 @@ for ss = 1: 9
     cfg.keeptrials = 'yes';
     eeg_tl = ft_timelockanalysis(cfg, eeg_sig);
     eeg_dat = eeg_tl.trial;
+
+    % ensure centered: 
+    eeg_dat = eeg_dat - mean(eeg_dat);
+
     clear eeg_tl;
 
     num_iterations = 10;
@@ -156,11 +161,14 @@ for ss = 1: 9
     results.num_channels = num_channels;
     Ws = nan(num_channels, num_iterations, n_steps);
     Vs = nan(num_channels, num_iterations, n_steps);
-    %%
+    Us = nan(num_channels, num_iterations, n_steps);
 
+    %%
+    r1_par_cca = nan(num_iterations, n_steps) ;
     r1_canon = nan(num_iterations, n_steps) ;
     r1_crm   = nan(num_iterations, n_steps) ;
-
+    
+    r1_par_cca_control = nan(num_iterations, n_steps) ;
     r1_canon_control  = nan(num_iterations, n_steps) ;
     r1_crm_control    = nan(num_iterations, n_steps) ;
 
@@ -189,18 +197,30 @@ for ss = 1: 9
             Cxy = eeg_train' * embeddings_train;
             Dxy = eeg_train' * embeddings_train_ctrl;
 
+            Czy = embeddings_train_ctrl' * embeddings_train;
+            Czz = embeddings_train_ctrl' * embeddings_train_ctrl;
+
+
+            Dxy_par = -Dxy*inv(Czz)*Czy;
+
             [Wx, Wy, ~]  = compute_weights(Cxx,Cyy,Cxy, zeros(size(Cxy)),1, 0.001);
 
             [Vx, Vy, lbd3i] = compute_weights(Cxx,Cyy,Cxy, Dxy,1, 0.001);
 
+            [Ux, Uy, ~] = compute_weights(Cxx,Cyy,Cxy, Dxy_par,1, 0.001);
+
 
             r1_canon(idx, ll) = corr(eeg_test*Wx, embeddings_test* Wy);
             r1_crm(idx, ll)    = corr(eeg_test*Vx, embeddings_test* Vy);
+            r1_par_cca(idx, ll) = corr(eeg_test*Ux, embeddings_test* Uy);
 
             r1_canon_control(idx, ll)  = corr(eeg_test*Wx, embeddings_test_ctrl* Wy);
             r1_crm_control(idx, ll)  = corr(eeg_test*Vx, embeddings_test_ctrl* Vy);
+            r1_par_cca_control(idx, ll) = corr(eeg_test*Ux, embeddings_test_ctrl* Uy);
+
             Ws(:, idx, ll) = Wx;
             Vs(:, idx, ll) = Vx;
+            Us(:, idx, ll) = Ux;
 
 
         end
@@ -209,21 +229,31 @@ for ss = 1: 9
     end
     results.Ws = Ws;
     results.Vs = Vs;
+    results.Us = Us;
+
     results.r1_canon = r1_canon;
     results.r1_crm = r1_crm;
+    results.r1_par_cca = r1_par_cca;
+
     results.r1_canon_control = r1_canon_control;
     results.r1_crm_control = r1_crm_control;
+    results.r1_par_cca_control = r1_par_cca_control;
+
     save_file = fullfile(deriv_path, "results_gamma50Fin.mat");
     save(save_file, "results");
 end
 
+%%
 %% results and plotting
 %% Initialize variables to store results from all subjects
 fsample = 100;
 all_r1_canon = [];
 all_r1_crm = [];
+all_r1_par_cca = [];
+
 all_r1_canon_control = [];
 all_r1_crm_control = [];
+all_r1_par_cca_control = [];
 
 % Load results from each subject
 for sub = 1:9
@@ -236,14 +266,19 @@ for sub = 1:9
     % Average across folds
     avg_r1_canon = mean(results.r1_canon, 1);
     avg_r1_crm = mean(results.r1_crm, 1);
+    avg_r1_par_cca = mean(results.r1_par_cca);
     avg_r1_canon_control = mean(results.r1_canon_control, 1);
     avg_r1_crm_control = mean(results.r1_crm_control, 1);
-    
+    avg_r1_par_cca_control = mean(results.r1_par_cca_control);
+
     % Concatenate results across subjects
     all_r1_canon = cat(1, all_r1_canon, avg_r1_canon);
     all_r1_crm = cat(1, all_r1_crm, avg_r1_crm);
+    all_r1_par_cca = cat(1, all_r1_par_cca, avg_r1_par_cca);
     all_r1_canon_control = cat(1, all_r1_canon_control, avg_r1_canon_control);
     all_r1_crm_control = cat(1, all_r1_crm_control, avg_r1_crm_control);
+    all_r1_par_cca_control = cat(1, all_r1_par_cca_control, avg_r1_par_cca_control);
+
 end
 
 % Calculate mean and standard error across subjects
@@ -253,11 +288,17 @@ std_r1_canon = std(all_r1_canon, [], 1) / sqrt(size(all_r1_canon, 1));
 mean_r1_crm = mean(all_r1_crm, 1);
 std_r1_crm = std(all_r1_crm, [], 1) / sqrt(size(all_r1_crm, 1));
 
+mean_r1_par_cca = mean(all_r1_par_cca, 1);
+std_r1_par_cca = std(all_r1_par_cca, [], 1) / sqrt(size(all_r1_par_cca, 1));
+
 mean_r1_canon_control = mean(all_r1_canon_control, 1);
 std_r1_canon_control = std(all_r1_canon_control, [], 1) / sqrt(size(all_r1_canon_control, 1));
 
 mean_r1_crm_control = mean(all_r1_crm_control, 1);
 std_r1_crm_control = std(all_r1_crm_control, [], 1) / sqrt(size(all_r1_crm_control, 1));
+
+mean_r1_par_cca_control = mean(all_r1_par_cca_control, 1);
+std_r1_par_cca_control = std(all_r1_par_cca_control, [], 1) / sqrt(size(all_r1_par_cca_control, 1));
 
 %% Plot results with shaded error bars
 figure;
@@ -267,23 +308,69 @@ hold on;
 set(gcf, 'Color', 'w');
 
 % Plot canonical correlation results
-shadedErrorBar([-4:1/fsample:4], mean_r1_canon, std_r1_canon, 'lineprops', {'-','Color','#3D348B'}, 'patchSaturation', 0.1);
-shadedErrorBar([-4:1/fsample:4], mean_r1_crm, std_r1_crm, 'lineprops', {'-','Color','#F35B04'}, 'patchSaturation', 0.1);
+shadedErrorBar([-4:1/fsample:4], mean_r1_canon, std_r1_canon, 'lineprops', {'-','Color','#1565C0 '}, 'patchSaturation', 0.1);
+shadedErrorBar([-4:1/fsample:4], mean_r1_crm, std_r1_crm, 'lineprops', {'-','Color','#C21807'}, 'patchSaturation', 0.1);
+shadedErrorBar([-4:1/fsample:4], mean_r1_par_cca, std_r1_par_cca, 'lineprops', {'-','Color','#F4B400'}, 'patchSaturation', 0.1);
 
-% % Plot control results
-% shadedErrorBar([-4:1/fsample:4], mean_r1_canon_control, std_r1_canon_control, 'lineprops', {'--','Color','#7678ED'}, 'patchSaturation', 0.1);
-% shadedErrorBar([-4:1/fsample:4], mean_r1_crm_control, std_r1_crm_control, 'lineprops', {'--','Color','#F18701'}, 'patchSaturation', 0.1);
+% % Plot control results #244F4B
+shadedErrorBar([-4:1/fsample:4], mean_r1_canon_control, std_r1_canon_control, 'lineprops', {'--','Color','#00897B '}, 'patchSaturation', 0.1);
+shadedErrorBar([-4:1/fsample:4], mean_r1_crm_control, std_r1_crm_control, 'lineprops', {'--','Color','#7B1FA2'}, 'patchSaturation', 0.1);
+shadedErrorBar([-4:1/fsample:4], mean_r1_par_cca_control, std_r1_par_cca_control, 'lineprops', {'-','Color','#E65100'}, 'patchSaturation', 0.1);
 
 % Set font size and type
 set(gca, 'FontSize', 16, 'FontName', 'Helvetica');
 
-legend({'CCA', 'CRM', 'CCA Control', 'CRM Control'});
+legend({'CCA', 'CRM', 'PAR CCA', 'CCA Control', 'CRM Control', 'PAR CCA Control'});
 xlabel('Time around word onset');
 ylabel('Correlation');
 title('Contextual vs. context free LLM-alignment');
 hold off;
 
 exportgraphics(figure(1), 'fig3b.pdf');
+
+%% Plot results differences with shaded error bars
+figure;
+hold on;
+[-4:1/fsample:4]
+% Set background color to white
+set(gcf, 'Color', 'w');
+
+% Plot canonical correlation results
+shadedErrorBar([-4:1/fsample:4], mean_r1_canon-mean_r1_canon_control, ...
+    std(all_r1_canon-all_r1_canon_control, [], 1) / sqrt(size(all_r1_canon, 1)), ...
+    'lineprops', {'-','Color','#1565C0 '}, 'patchSaturation', 0.1);
+shadedErrorBar([-4:1/fsample:4], mean_r1_crm - mean_r1_crm_control,...
+    std(all_r1_crm-all_r1_crm_control, [], 1) / sqrt(size(all_r1_crm, 1)),...
+    'lineprops', {'-','Color','#C21807'}, 'patchSaturation', 0.1);
+shadedErrorBar([-4:1/fsample:4], mean_r1_par_cca - mean_r1_par_cca_control, ...
+    std(all_r1_par_cca-all_r1_par_cca_control, [], 1) / sqrt(size(all_r1_par_cca, 1)),... 
+    'lineprops', {'-','Color','#F4B400'}, 'patchSaturation', 0.1);
+
+% % % Plot control results #244F4B
+% shadedErrorBar([-4:1/fsample:4], mean_r1_canon_control, std_r1_canon_control, 'lineprops', {'--','Color','#00897B '}, 'patchSaturation', 0.1);
+% shadedErrorBar([-4:1/fsample:4], mean_r1_crm_control, std_r1_crm_control, 'lineprops', {'--','Color','#7B1FA2'}, 'patchSaturation', 0.1);
+% shadedErrorBar([-4:1/fsample:4], mean_r1_par_cca_control, std_r1_par_cca_control, 'lineprops', {'-','Color','#E65100'}, 'patchSaturation', 0.1);
+
+
+
+
+[h, p, ci, stats] = ttest((all_r1_crm-all_r1_crm_control), (all_r1_canon-all_r1_canon_control), 'Tail','right');
+h(h==0) = nan;
+
+plot([-4:1/fsample:4], -0.05.*h, 'o', 'MarkerEdgeColor', '#6C3E63', 'MarkerFaceColor', '#6C3E63');
+
+[h, p, ci, stats] = ttest((all_r1_crm-all_r1_crm_control), (all_r1_par_cca-all_r1_par_cca_control), 'Tail','right');
+h(h==0) = nan;
+
+plot([-4:1/fsample:4], -0.07.*h, 'o', 'MarkerEdgeColor', '#D27A2F','MarkerFaceColor', '#D27A2F');
+
+% Set font size and type
+set(gca, 'FontSize', 16, 'FontName', 'Helvetica');
+
+legend({'CCA - Control', 'CRM - Control', 'PAR CCA - Control', '*<0.05 CRM vs CCA',  '*<0.05 CRM vs par CCA'});
+xlabel('Time around word onset');
+ylabel('Correlation');
+title('Contextual vs. context free LLM-alignment');
 %% compute topographies at peak
 
 all_epos = [];
