@@ -14,7 +14,7 @@ function [w_x, w_y, lambda3] = compute_weights(C_xx, C_yy,C_xy, D_xy, f, gamma, 
         f = 1;
     end
     
-    if nargin < 6 ||  ~isempty(chlsky)  
+    if nargin < 7 ||  ~isempty(chlsky)  
         if nargin >= 4   %   Find "f" solutions.
             fun = @(l) foo2(C_xx,C_yy,C_xy, D_xy,l, f);
         else
