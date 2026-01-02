@@ -1,7 +1,7 @@
 function [w_x, w_y, lambda3] = compute_weights(C_xx, C_yy,C_xy, D_xy, f, gamma, chlsky)
 
 
-    if nargin > 5 & ~isempty(gamma)      %   Apply regularization on covariance matrices.
+    if nargin > 5 && ~isempty(gamma)      %   Apply regularization on covariance matrices.
     
         I = eye(size(C_xx,1));
         C_xx = C_xx + gamma*I; %Tuzhilina, Tozzi, Hastie (2021)
