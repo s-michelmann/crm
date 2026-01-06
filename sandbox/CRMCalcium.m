@@ -39,15 +39,13 @@ for i = 1:9
 end
 
 %% Run CRM
-% Idea1: task1 behavior vs neurons VS task2 behavior v neurons
-% Idea2: correct behavior vs neurons VS error task v neurons
 
-flag = behavioralVariables.ChoiceCorrect(Datarange) == 1;
+flag = behavioralVariables.MazeID(Datarange) == 11;
 
-X = neural_data(:,flag); % good trials
+X = neural_data(:,flag); % Accumulator
 Y = behavioral_data(:, flag);
 
-S = neural_data(:, ~flag); % error trials
+S = neural_data(:, ~flag); % No distractors
 T = behavioral_data(:, ~flag);
  
 C_xy = X*Y';
@@ -58,7 +56,7 @@ D_xy = S*T';
 %% warning('off','MATLAB:singularMatrix')
 
 tic
-[w_x, w_y, lambda3] = compute_weights(C_xx, C_yy,C_xy, D_xy);
+[w_x, w_y, lambda3] = compute_weights(C_xx, C_yy,C_xy, 0*D_xy);
 toc
 
 %% analysis
@@ -76,15 +74,36 @@ rx2 = std(behavioralVariables.Position_X(Datarange));
 ry1 = mean(behavioralVariables.Position(Datarange));
 ry2 = std(behavioralVariables.Position(Datarange));
 
+c = redblue(256);
+
+subplot(2,1,1)
 scatter(posy*ry2 + ry1, posx*rx2 + rx1, [], w_x'*neural_data)
-clim([-0.01,0.01])
+clim([-0.05,0.05])
+colormap(c)
 xlabel("Position of the mouse in cm")
 ylabel("Position of the mouse in cm")
-% subplot(2,1,2)
-% for t = unique(tri)'
-%     acc = w_x'*neural_data;
-%     plot(posy(tri==t), acc(tri==t))
-%     hold on;
-% end
 
-% last: Retina P vs movie, controlling for P v luminance
+subplot(2,1,2)
+scatter(posy*ry2 + ry1, posx*rx2 + rx1, [], w_y'*behavioral_data)
+clim([-0.05,0.05])
+colormap(c)
+xlabel("Position of the mouse in cm")
+ylabel("Position of the mouse in cm")
+
+%constraint = w_y'*behavioral_data;
+no_constraint = w_y'*behavioral_data;
+
+%%
+figure(2)
+n = median(constraint ./ no_constraint); % normalization.
+scatter(posy*ry2 + ry1, posx*rx2 + rx1, [], constraint-n*no_constraint)
+cm = redblue(256);
+colormap(cm)
+title("Constraint - CCA")
+xlabel("Position of the mouse in cm")
+ylabel("Position of the mouse in cm")
+hold on;
+caxis([-1,1]*1e-3)
+plot([0,0],[-4,4],'k--')
+plot([200,200]-10,[-4,4],'k--')
+plot([300,300]-10,[-4,4],'k--')
