@@ -2,3 +2,4 @@
 *.pdf
 *.mpg
 *.txt
+.DS_Store
