@@ -37,8 +37,8 @@ corr_crm = corr( Y * w_y, true_signal);
 corr_standard = corr( Y * w_standard, true_signal);
 
 fprintf('\n')
-fprintf('Constraint wDw (CRM): %.4f (Should be ~0)\n', Dxy * w_y);
-fprintf('Correlation with True Signa (CRM):   %.4f\n', corr_crm);
+fprintf('Constraint wDw (univariateCRM): %.4f (Should be ~0)\n', Dxy * w_y);
+fprintf('Correlation with True Signa (univariateCRM):   %.4f\n', corr_crm);
 fprintf('\n')
 fprintf('Constraint wDw (Standard): %.4f (Likely non-zero)\n', Dxy * w_standard);
 fprintf('Correlation with True Signal (Standard):   %.4f\n', corr_standard);
