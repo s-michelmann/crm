@@ -1,196 +1,136 @@
-function [w_x_best, w_y_best, lambda3_best, Wxs, Wys, lambdas, corrs] =  compute_weights_multi_rand(C_xx, C_yy,C_xy, D_xy, f, gamma, chlsky, n_init)
+function [w_x_best, w_y_best, lambda3_best, Wxs, Wys, lambdas, corrs] = ...
+    compute_weights_multi_rand(C_xx, C_yy, C_xy, D_xy, f, gamma, chlsky, n_init)
 
-    
-    % todo check for size(Cxx) == size(Cyy) 
-    % todo add empty Cxx as I (whitten et al.) 
 
-    if nargin < 5 || isempty(f)
-        f = 1;
+    % COMPUTE_WEIGHTS_MULTI_RAND
+    %
+    %   Run multiple random initializations of the dense CRM solver
+    %   (compute_weights_init_rand) and return the best solution based on
+    %   the achieved cross‑covariance correlation.
+    %
+    %   This function is a wrapper that:
+    %       1. Calls compute_weights_init_rand() n_init times
+    %       2. Uses different random seeds (k = 0,1,2,...)
+    %       3. Stores all solutions (w_x, w_y, lambda3)
+    %       4. Computes the canonical correlation wx' * C_xy * wy
+    %       5. Selects and returns the best solution
+    %
+    %   It is useful when the optimization landscape is non‑convex and
+    %   different random starts may converge to different local optima.
+    %
+    % -------------------------------------------------------------------------
+    %   SYNTAX
+    %
+    %   [w_x_best, w_y_best, lambda3_best, Wxs, Wys, lambdas, corrs] = ...
+    %       compute_weights_multi_rand(C_xx, C_yy, C_xy, D_xy)
+    %
+    %   [...] = compute_weights_multi_rand(..., f, gamma, chlsky, n_init)
+    %
+    % -------------------------------------------------------------------------
+    %   INPUTS
+    %
+    %   C_xx   : [p × p] SPD covariance matrix for X
+    %   C_yy   : [q × q] SPD covariance matrix for Y
+    %   C_xy   : [p × q] cross‑covariance matrix
+    %   D_xy   : [p × q] confound matrix (to be minimized)
+    %
+    %   f      : number of canonical components (default = 1)
+    %
+    %   gamma  : ridge regularization strength passed to
+    %            compute_weights_init_rand (default = 0)
+    %
+    %   chlsky : logical flag
+    %            true  → use Cholesky‑based solver for initialization
+    %            false → use standard solver
+    %
+    %   n_init : number of random initializations (default = 10)
+    %
+    % -------------------------------------------------------------------------
+    %   OUTPUTS
+    %
+    %   w_x_best     : best canonical weight vector for X
+    %   w_y_best     : best canonical weight vector for Y
+    %   lambda3_best : best lambda3 value returned by the solver
+    %
+    %   Wxs          : [p × n_init] matrix of all w_x solutions
+    %   Wys          : [q × n_init] matrix of all w_y solutions
+    %   lambdas      : [1 × n_init] vector of all lambda3 values
+    %   corrs        : [1 × n_init] vector of correlations wx' * C_xy * wy
+    %
+    % -------------------------------------------------------------------------
+    %   NOTES
+    %
+    %   • Each initialization uses seed (k‑1)
+    %
+    %   • The "best" solution is defined as the one with the largest
+    %         corr = real(w_x' * C_xy * w_y)
+    %
+    %   • All solutions are returned for inspection of variability
+    %     across random starts.
+    %
+    % -------------------------------------------------------------------------
+    %   SEE ALSO
+    %       compute_weights_init_rand
+    %       compute_weights_sparse_init_rand
+    %       compute_weights_sparse_multi_rand
+
+    arguments
+        C_xx double {mustBeSquareMatrix(C_xx)}
+        C_yy double {mustBeSquareMatrix(C_yy)}
+        C_xy double
+        D_xy double
+        f (1,1) double {mustBePositive} = 1
+        gamma (1,1) double {mustBeNonnegative} = 0
+        chlsky (1,1) logical = false
+        n_init (1,1) double {mustBeInteger, mustBePositive} = 10
     end
 
-    if nargin < 6 || isempty(gamma)      %   Apply regularization on covariance matrices.
-        gamma = 0;
-    end
-    if nargin < 7 ||  isempty(chlsky)
-        chlsky   = false;
-    end
-    if nargin < 8 || isempty(n_init) 
-        n_init = 10;
-    end
+    p = size(C_xx,1);
+    q = size(C_yy,1);
 
-    % --- Regularization --- 
-    if gamma > 0
-        I = eye(size(C_xx,1)); 
-        C_xx = C_xx + gamma * I; 
-        C_yy = C_yy + gamma * I; 
-    end
+    Wxs     = zeros(p, n_init);
+    Wys     = zeros(q, n_init);
+    lambdas = zeros(1, n_init);
+    corrs   = zeros(1, n_init);
 
+    fprintf('Running %d random initializations:\n', n_init);
 
-    % --- Precompute Cholesky if requested --- 
-    if chlsky 
-        [Lx,pflag] = chol(C_xx,'lower'); 
-        [Ly,qflag] = chol(C_yy,'lower'); 
-        if pflag || qflag 
-            error('C_xx/C_yy not SPD. Increase gamma.'); 
-        end 
-    end
-
-    % --- Heuristic range for lambda3 
-    ratio = norm(C_xy,'fro') / max(norm(D_xy,'fro'), 1e-12); 
-    maxrange = 10 * ratio; 
-    if ~isfinite(maxrange) || maxrange == 0 
-        maxrange = 1; 
-    end
-
-    % --- Case: ratio > 10 → default to CCA ---
-    if ratio > 10 % Standard CCA
-
-        M = (C_xx \ C_xy) / C_yy * C_xy';
-        [W, D] = eigs(M, f, 'lr');
-
-        % Storage
-        list_wx = [];
-        list_wy = [];
-        list_corr = [];
-        lambdas = zeros(1, f);
-        for i = 1:size(W,2)
-            w_x = W(:,i);
-            w_x = w_x./sqrt(w_x'*C_xx*w_x);
-            w_y = (C_yy \ (C_xy' * w_x)) / sqrt(D(i,i));   
-            % sign convention
-            if w_x' * C_xy * w_y < 0; w_y = -w_y; end
-            list_wx = [list_wx, w_x];
-            list_wy = [list_wy, w_y];
-
-            list_corr = [list_corr, w_x'*C_xy*w_y ];  % max
-        end
-        % Sort them by correlation
-        [B,I] = sort(list_corr, 'descend');
-
-        Wxs   = list_wx(:,I);
-        Wys   = list_wy(:,I);
-        corrs = list_corr(I);
-
-        lambda3_best = 0;
-
-        % return early
-        w_x_best = Wxs(:,1);
-        w_y_best = Wys(:,1);
-        return;
-    end
-
-
-    % --- Case 2: CRM multi-start --- 
-    lambda_inits = zeros(1, n_init); 
-    lambda_inits(1) = 0; % always include 0 
-    for k = 2:n_init 
-        lambda_inits(k) = (2*rand - 1) * maxrange; 
-    end
-
-    % pre-allocate storage
-    p = size(C_xx,1); 
-    q = size(C_yy,1); 
-    Wxs = zeros(p, n_init); 
-    Wys = zeros(q, n_init); 
-    lambdas = zeros(1, n_init); 
-    corrs = zeros(1, n_init);
-    % --- Multi-start loop ---
     for k = 1:n_init
 
-        lambda0 = lambda_inits(k);
+        % --- Call updated solver (k-1 preserves your original behavior) ---
+        [wx, wy, lambda3] = compute_weights_init_rand( ...
+            C_xx, C_yy, C_xy, D_xy, f, gamma, chlsky, k-1);
 
-        if ~ chlsky
-            if nargin > 4   %   Find "f" solutions.
-                fun = @(l) foo2(C_xx,C_yy,C_xy, D_xy,l, f);
-            else
-                fun = @(l) foo2(C_xx,C_yy,C_xy, D_xy,l, 1);
-            end
+        % --- Store ---
+        Wxs(:,k)     = wx;
+        Wys(:,k)     = wy;
+        lambdas(k)   = lambda3;
+        corrs(k)     = real(wx' * C_xy * wy);
 
-            lambda3 = fminsearch(fun,lambda0);
-
-            M = inv(C_xx)*(C_xy+lambda3*D_xy)*inv(C_yy)* ((C_xy+lambda3*D_xy)');
-            [W,D] = eigs(M,f,'lr');
-            w_x = W(:,f);
-            w_x = w_x./sqrt(w_x'*C_xx*w_x);
-            lbd = sqrt(D(f,f));
-            w_y = -inv(C_yy)*(C_xy+lambda3*D_xy)'/lbd *w_x;
-
-        else
-      
-             % --- Objective for lambda3 uses consistent eigen mode and solves ---
-            if nargin > 4
-                fun = @(l) foo3(Lx, Ly, C_xy, D_xy, l, f);
-            else
-                fun = @(l) foo3(Lx, Ly, C_xy, D_xy, l, 1);
-            end
-            lambda3 = fminsearch(fun, lambda0);
-           
-            % --- Build M with solves: M = K*K' where K = Cxx^{-1/2}(Cxy+lD)Cyy^{-T/2} ---
-            K = (Lx \ (C_xy + lambda3 * D_xy)) / Ly';
-            M = K * K';                % symmetric PSD
-
-            % --- Largest real-part eigenvector (consistent with objective) ---
-            opts.isreal = true;
-            [W,D] = eigs(M, f, 'lr', opts);
-            vx = W(:,end);
-
-            % --- Map back, normalize in original metric ---
-            w_x = Lx' \ vx;
-            w_x = w_x ./ sqrt(w_x' * C_xx * w_x);
-
-            lbd = sqrt(D(end,end));
-            % w_y = -Cyy^{-1} (Cxy + l Dxy)' / lbd * w_x via solves
-            rhs = (C_xy + lambda3 * D_xy)' * w_x;
-            w_y = -(C_yy \ rhs) / lbd;
-        end
-        % sign convention
-        if w_x'*C_xy*w_y < 0
-            w_y = -w_y; % The sign of "lbd" is not constrained. Make sure we maximize correlation
-        end
-        % store 
-        Wxs(:,k) = w_x; 
-        Wys(:,k) = w_y; 
-        lambdas(k) = lambda3; 
-        corrs(k) = real(w_x' * C_xy * w_y);
+        % --- Progress bar ---
+        pct = k / n_init;
+        barWidth = 30;
+        nFilled = round(pct * barWidth);
+        fprintf('\r[%s%s] %3.0f%%', ...
+            repmat('#',1,nFilled), repmat('.',1,barWidth-nFilled), pct*100);
     end
-    % --- pick best by correlation --- 
-    [~, idx_best] = max(corrs); 
-    w_x_best = Wxs(:,idx_best); 
-    w_y_best = Wys(:,idx_best); 
+
+    fprintf('\n');
+
+    % --- Pick best ---
+    [~, idx_best] = max(corrs);
+    w_x_best     = Wxs(:,idx_best);
+    w_y_best     = Wys(:,idx_best);
     lambda3_best = lambdas(idx_best);
 end
 
-
-function [tst] = foo2(C_xx, C_yy, C_xy, D_xy, lbd3, f)
-    % calculate the f largest eigenvalues only!
-    M = inv(C_xx)*(C_xy+lbd3*D_xy)*inv(C_yy)* ((C_xy+lbd3*D_xy)');
-    [W,D] = eigs(M,f,'lr');
-    w_x = W(:,f);
-    w_x = w_x./sqrt(w_x'*C_xx*w_x);
-    w_y = inv(C_yy)*(C_xy+lbd3*D_xy)'*w_x;
-    tst = abs(w_x'*D_xy*w_y);
+function mustBeSquareMatrix(M)
+if ~ismatrix(M) || size(M,1) ~= size(M,2)
+    error('Matrix must be square.');
 end
-
-
-
-function [tst] = foo3(Lx, Ly, C_xy, D_xy, lbd3, f)
-    % --- Consistent eigen criterion and solves (no inv) ---
-    % M = K*K' with K = Cxx^{-1/2}(Cxy+lD)Cyy^{-T/2}
-    K = (Lx \ (C_xy + lbd3 * D_xy)) / Ly';
-    M = K * K';
-
-    opts.isreal = true; 
-    [W,~] = eigs(M, f, 'lr', opts);
-    vx = W(:,end);
-
-    % w_x in original coordinates (scale irrelevant for tst)
-    w_x = Lx' \ vx;
-    w_x = w_x ./ max(norm(w_x), 1e-12);
-
-    % w_y via solves (unnormalized ok for confound objective)
-    rhs = (C_xy + lbd3 * D_xy)' * w_x;
-    w_y = Ly \ (Ly' \ rhs);
-
-    % Confound term to minimize
-    tst = abs(w_x' * D_xy * w_y);
+end
+function mustBeNonnegative(x)
+if any(x < 0)
+    error('Value must be nonnegative.');
+end
 end
