@@ -114,7 +114,7 @@ function [w_x, w_y, lambda3] = compute_weights_init_rand( ...
     % --- Case: ratio > 10 → default to CCA ---
     if ratio > 10
         M = (C_xx \ C_xy) / C_yy * C_xy';
-        [W, D] = eigs(M, f, 'lm');
+        [W, D] = eigs(M, f, 'lr');
 
         w_x = W(:,f);
         w_x = w_x ./ sqrt(w_x' * C_xx * w_x);
@@ -145,7 +145,7 @@ function [w_x, w_y, lambda3] = compute_weights_init_rand( ...
         M = inv(C_xx) * (C_xy + lambda3 * D_xy) * ...
             inv(C_yy) * (C_xy + lambda3 * D_xy)';
 
-        [W, D] = eigs(M, f, 'lm');
+        [W, D] = eigs(M, f, 'lr');
         w_x = W(:,f);
         w_x = w_x ./ sqrt(w_x' * C_xx * w_x);
 
@@ -161,7 +161,7 @@ function [w_x, w_y, lambda3] = compute_weights_init_rand( ...
         M = K * K';
 
         opts.isreal = true;
-        [W, D] = eigs(M, f, 'lm', opts);
+        [W, D] = eigs(M, f, 'lr', opts);
         vx = W(:,end);
 
         w_x = Lx' \ vx;
@@ -181,7 +181,7 @@ end
 function [tst] = foo2(C_xx, C_yy, C_xy, D_xy, lbd3, f)
     % calculate the f largest eigenvalues only!
     M = inv(C_xx)*(C_xy+lbd3*D_xy)*inv(C_yy)* ((C_xy+lbd3*D_xy)');
-    [W,D] = eigs(M,f,'lm');
+    [W,D] = eigs(M,f,'lr');
     w_x = W(:,f);
     w_x = w_x./sqrt(w_x'*C_xx*w_x);
     w_y = inv(C_yy)*(C_xy+lbd3*D_xy)'*w_x;
@@ -195,7 +195,7 @@ function tst = foo3(Lx, Ly, C_xy, D_xy, lbd3, f)
     M = K * K';
 
     opts.isreal = true;
-    [W,D] = eigs(M, f, 'lm', opts);
+    [W,D] = eigs(M, f, 'lr', opts);
     vx = W(:,end);
 
     % Map back to original coordinates

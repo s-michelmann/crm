@@ -42,7 +42,6 @@ function [w_x_best, w_y_best, Wxs, Wys, corrs] = ...
     %       theta_y   – L1 constraint for w_y (0 → auto‑select)
     %       gamma     – ridge regularization strength
     %       chlsky    – use Cholesky‑based initialization
-    %       k         – random seed index (overridden internally)
     %       max_iter  – maximum number of gradient iterations
     %       tol       – convergence tolerance
     %       n_init    – number of random initializations
@@ -96,7 +95,6 @@ function [w_x_best, w_y_best, Wxs, Wys, corrs] = ...
         params.theta_y (1,1) double {mustBeNonnegative} = 0;
         params.gamma (1,1) double {mustBeNonnegative} = 0
         params.chlsky (1,1) logical = false
-        params.k (1,1) double {mustBeInteger, mustBeNonnegative} = 0
         params.max_iter (1,1) double {mustBeInteger, mustBePositive} = 10000
         params.tol (1,1) double {mustBePositive} = 1e-6
         params.n_init (1,1) double {mustBePositive, mustBeInteger, mustBeNonnegative} = 10

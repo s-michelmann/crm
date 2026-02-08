@@ -1,4 +1,4 @@
-function [w_x, w_y] = compute_weights_sparse(C_xx, C_yy, C_xy, D_xy, params)
+function [w_x, w_y] = compute_weights_sparse(C_xx, C_yy, C_xy, D_xy, ff, params)
 %   [w_x, w_y] = compute_weights_sparse(C_xx, C_yy, C_xy, D_xy, params)
 
     % doing this neater. sparse
@@ -8,7 +8,7 @@ function [w_x, w_y] = compute_weights_sparse(C_xx, C_yy, C_xy, D_xy, params)
     theta_y = params.theta_y;
     gamma = params.gamma; % We can use the Ridge term
     
-    [w_x, w_y, ~] = compute_weights(C_xx, C_yy, C_xy, D_xy, 1, gamma);
+    [w_x, w_y, ~] = compute_weights(C_xx, C_yy, C_xy, D_xy, ff, gamma);
 
     % Iterative Solver
     for iter = 1:params.max_iter

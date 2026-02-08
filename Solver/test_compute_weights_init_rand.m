@@ -262,7 +262,6 @@ fprintf('Sparse Cholesky consistency test passed.\n')
 
 %% -------------------------------------------------------------
 %  Test: gamma sweep (dense + sparse)
-%% -------------------------------------------------------------
 fprintf('\n--- Testing gamma sweep (dense + sparse) ---\n')
 
 gamma_values = logspace(-4, 1, 30);   % 1e-4 → 10
