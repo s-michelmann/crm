@@ -90,8 +90,8 @@ function [w_x_best, w_y_best, Wxs, Wys, corrs] = ...
         params.f (1,1) double {mustBePositive} = 1
         params.mu (1,1) double = Inf              % Inf → auto (use lambda3)
         params.step_size (1,1) double {mustBeNonnegative} = 0  % 0 → auto (1/L)
-        % If NOT provided init as zero
-        params.theta_x (1,1) double {mustBeNonnegative} = 0;
+        params.sparsity (1,1) double = NaN        % NaN → auto; 0–1 = fraction of zeros
+        params.theta_x (1,1) double {mustBeNonnegative} = 0;  % 0 → use sparsity or auto
         params.theta_y (1,1) double {mustBeNonnegative} = 0;
         params.gamma (1,1) double {mustBeNonnegative} = 0
         params.chlsky (1,1) logical = true

@@ -25,13 +25,18 @@ function [w_x, w_y] = compute_weights_sparse_init_rand(C_xx, C_yy, C_xy, D_xy, p
     %                 trade‑off found by fminsearch in compute_weights_init_rand.
     %     step_size – gradient step size (default 0 → auto).
     %                 0 computes 1 / sigma_max(C_xy + mu * D_xy).
-    %     theta_x   – L1 constraint for w_x (0 → auto via choose_sparsity)
-    %     theta_y   – L1 constraint for w_y (0 → auto via choose_sparsity)
+    %     sparsity  – fraction of zero entries (0–1). E.g. 0.9 = 90% zeros.
+    %                 Overridden by explicit theta_x/theta_y if provided.
+    %                 NaN (default) → auto‑select via choose_sparsity().
+    %     theta_x   – L1 constraint for w_x (0 → use sparsity or auto)
+    %     theta_y   – L1 constraint for w_y (0 → use sparsity or auto)
     %     gamma     – ridge regularization added to C_xx, C_yy
     %     chlsky    – whether to use Cholesky‑based solver for init
     %     k         – random seed index for initialization
     %     max_iter  – maximum number of gradient iterations
     %     tol       – stopping tolerance based on change in w_x, w_y
+    %
+    %   Sparsity priority: explicit theta > sparsity ratio > auto.
     %
     % -------------------------------------------------------------------------
     %   OUTPUTS
@@ -47,9 +52,14 @@ function [w_x, w_y] = compute_weights_sparse_init_rand(C_xx, C_yy, C_xy, D_xy, p
     %   With mu = lambda3 (the default), both solvers optimize the same
     %   objective — dense via eigendecomposition, sparse via proximal gradient.
     %
-    %   If theta_x = theta_y = 0, sparsity is chosen automatically using
-    %     choose_sparsity(), which implements a Witten‑style L1 constraint
-    %     based on the magnitude of the dense initial solution.
+    %   Sparsity is determined by (in order of priority):
+    %     1. Explicit theta_x / theta_y (if nonzero)
+    %     2. sparsity ratio (if not NaN)
+    %     3. Auto via choose_sparsity() with a warning — uses the universal
+    %        threshold heuristic k = min(10%, 2/sqrt(p)) * p non‑zero entries
+    %        (Donoho & Johnstone, 1994, "Ideal spatial adaptation by wavelet
+    %        shrinkage", Biometrika 81(3); applied to CCA in Witten et al.,
+    %        2009, "A penalized matrix decomposition", Biostatistics 10(3)).
     %   Soft‑thresholding is applied using apply_threshold(), which finds
     %     the shrinkage δ such that ||w||_1 ≤ theta (pre‑normalization).
     %   After each update, w_x and w_y are normalized so that:
@@ -69,8 +79,8 @@ function [w_x, w_y] = compute_weights_sparse_init_rand(C_xx, C_yy, C_xy, D_xy, p
         params.f (1,1) double {mustBePositive} = 1
         params.mu (1,1) double = Inf              % Inf → auto (use lambda3 from dense init)
         params.step_size (1,1) double {mustBeNonnegative} = 0  % 0 → auto (1/L)
-        % If NOT provided init as zero
-        params.theta_x (1,1) double {mustBeNonnegative} = 0;
+        params.sparsity (1,1) double = NaN        % NaN → auto; 0–1 = fraction of zeros
+        params.theta_x (1,1) double {mustBeNonnegative} = 0;  % 0 → use sparsity or auto
         params.theta_y (1,1) double {mustBeNonnegative} = 0;
         params.gamma (1,1) double {mustBeNonnegative} = 0
         params.chlsky (1,1) logical = true
@@ -102,20 +112,36 @@ function [w_x, w_y] = compute_weights_sparse_init_rand(C_xx, C_yy, C_xy, D_xy, p
         step = params.step_size;
     end
 
-    % --- Sparsity selection ---
+    % --- Sparsity selection (priority: theta > sparsity ratio > auto) ---
     theta_x = params.theta_x;
     theta_y = params.theta_y;
-    if theta_x == 0 && theta_y == 0
-        [theta_x, theta_y] = choose_sparsity(C_xx, C_yy, w_x, w_y);
-    elseif theta_x == 0
-        [theta_x, ~] = choose_sparsity(C_xx, C_yy, w_x, w_y);
-    elseif theta_y == 0
-        [~, theta_y] = choose_sparsity(C_xx, C_yy, w_x, w_y);
+    p = size(C_xx, 1);
+    q = size(C_yy, 1);
+
+    if theta_x > 0 && theta_y > 0
+        % User provided explicit thresholds — use as-is
+
+    elseif ~isnan(params.sparsity)
+        % User provided sparsity ratio — compute theta from it
+        [auto_tx, auto_ty] = theta_from_sparsity( ...
+            params.sparsity, p, q, w_x, w_y);
+        if theta_x == 0, theta_x = auto_tx; end
+        if theta_y == 0, theta_y = auto_ty; end
+
+    else
+        % Auto-select (Donoho & Johnstone / Witten heuristic)
+        warning('sparse_crm:no_sparsity', ...
+            ['No sparsity setting provided (theta_x, theta_y, or sparsity). ' ...
+             'Using automatic selection via Donoho & Johnstone heuristic.']);
+        [auto_tx, auto_ty, frac_zeros_x, frac_zeros_y] = ...
+            choose_sparsity(C_xx, C_yy, w_x, w_y);
+        if theta_x == 0, theta_x = auto_tx; end
+        if theta_y == 0, theta_y = auto_ty; end
+        fprintf('  Auto-selected sparsity: %.1f%% zeros (x, p=%d), %.1f%% zeros (y, q=%d)\n', ...
+            frac_zeros_x * 100, p, frac_zeros_y * 100, q);
     end
 
     % --- Regularized covariance (same metric as dense init) ---
-    p = size(C_xx, 1);
-    q = size(C_yy, 1);
     C_xx_r = C_xx + gamma * eye(p);
     C_yy_r = C_yy + gamma * eye(q);
 
@@ -218,15 +244,19 @@ function mustBeNonnegative(x)
     end
 end
 
-function [theta_x, theta_y] = choose_sparsity(C_xx, C_yy, w_x0, w_y0, c)
-    % CHOOSE_SPARSITY  Compute principled L1 thresholds for sparse CCA.
+function [theta_x, theta_y, frac_zeros_x, frac_zeros_y] = choose_sparsity(C_xx, C_yy, w_x0, w_y0, c)
+    % CHOOSE_SPARSITY  Auto-select L1 thresholds for sparse CCA/CRM.
     %
-    %   Only used when user does not provide theta_x/theta_y.
-    %   c = sparsity constant (default 2)
-    
-    % Witten et al. (2009)
-    % Donoho & Johnstone soft‑threshold theory
-    
+    %   Uses the universal threshold heuristic: keep k = min(10%, c/sqrt(p)) * p
+    %   non-zero entries, with per-entry magnitude estimated from the dense
+    %   solution's median absolute weight.
+    %
+    %   References:
+    %     Donoho & Johnstone (1994), "Ideal spatial adaptation by wavelet
+    %       shrinkage", Biometrika 81(3), 425–455.
+    %     Witten, Tibshirani & Hastie (2009), "A penalized matrix
+    %       decomposition", Biostatistics 10(3), 515–534.
+
     arguments
         C_xx double {mustBeSquareMatrix(C_xx)}
         C_yy double {mustBeSquareMatrix(C_yy)}
@@ -234,21 +264,41 @@ function [theta_x, theta_y] = choose_sparsity(C_xx, C_yy, w_x0, w_y0, c)
         w_y0 (:,1) double
         c (1,1) double {mustBePositive} = 2
     end
-    
+
     p_x = size(C_xx,1);
     p_y = size(C_yy,1);
-    
-    % sparsity fraction = min(10%, c / sqrt(p))
-    frac_x = min(0.1, c / sqrt(p_x));
-    frac_y = min(0.1, c / sqrt(p_y));
-    
-    k_x = max(1, round(frac_x * p_x));
-    k_y = max(1, round(frac_y * p_y));
-    
-    % robust magnitude estimate
+
+    % fraction of entries to keep: min(10%, c / sqrt(p))
+    frac_nonzero_x = min(0.1, c / sqrt(p_x));
+    frac_nonzero_y = min(0.1, c / sqrt(p_y));
+
+    k_x = max(1, round(frac_nonzero_x * p_x));
+    k_y = max(1, round(frac_nonzero_y * p_y));
+
+    % robust magnitude estimate from dense solution
     med_x = median(abs(w_x0));
     med_y = median(abs(w_y0));
-    
+
+    theta_x = k_x * med_x;
+    theta_y = k_y * med_y;
+
+    % effective fraction of zeros (for reporting)
+    frac_zeros_x = 1 - k_x / p_x;
+    frac_zeros_y = 1 - k_y / p_y;
+end
+
+function [theta_x, theta_y] = theta_from_sparsity(sparsity, p_x, p_y, w_x0, w_y0)
+    % THETA_FROM_SPARSITY  Compute L1 thresholds from a sparsity ratio.
+    %
+    %   sparsity : fraction of zeros (0–1). E.g. 0.9 = 90% zeros.
+
+    frac_nonzero = 1 - sparsity;
+    k_x = max(1, round(frac_nonzero * p_x));
+    k_y = max(1, round(frac_nonzero * p_y));
+
+    med_x = median(abs(w_x0));
+    med_y = median(abs(w_y0));
+
     theta_x = k_x * med_x;
     theta_y = k_y * med_y;
 end
