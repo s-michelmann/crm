@@ -1,5 +1,5 @@
 function [w_x_best, w_y_best, lambda3_best, Wxs, Wys, lambdas, corrs] = ...
-    compute_weights_multi_rand(C_xx, C_yy, C_xy, D_xy, f, gamma, chlsky, n_init)
+    compute_weights_multi_rand(C_xx, C_yy, C_xy, D_xy, options)
 
 
     % COMPUTE_WEIGHTS_MULTI_RAND
@@ -24,7 +24,7 @@ function [w_x_best, w_y_best, lambda3_best, Wxs, Wys, lambdas, corrs] = ...
     %   [w_x_best, w_y_best, lambda3_best, Wxs, Wys, lambdas, corrs] = ...
     %       compute_weights_multi_rand(C_xx, C_yy, C_xy, D_xy)
     %
-    %   [...] = compute_weights_multi_rand(..., f, gamma, chlsky, n_init)
+    %   [...] = compute_weights_multi_rand(..., f=2, gamma=0.01, chlsky=true, n_init=20)
     %
     % -------------------------------------------------------------------------
     %   INPUTS
@@ -79,12 +79,13 @@ function [w_x_best, w_y_best, lambda3_best, Wxs, Wys, lambdas, corrs] = ...
         C_yy double {mustBeSquareMatrix(C_yy)}
         C_xy double
         D_xy double
-        f (1,1) double {mustBePositive} = 1
-        gamma (1,1) double {mustBeNonnegative} = 0
-        chlsky (1,1) logical = false
-        n_init (1,1) double {mustBeInteger, mustBePositive} = 10
+        options.f (1,1) double {mustBePositive} = 1
+        options.gamma (1,1) double {mustBeNonnegative} = 0
+        options.chlsky (1,1) logical = true
+        options.n_init (1,1) double {mustBeInteger, mustBePositive} = 10
     end
 
+    n_init = options.n_init;
     p = size(C_xx,1);
     q = size(C_yy,1);
 
@@ -99,7 +100,8 @@ function [w_x_best, w_y_best, lambda3_best, Wxs, Wys, lambdas, corrs] = ...
 
         % --- Call updated solver (k-1 preserves your original behavior) ---
         [wx, wy, lambda3] = compute_weights_init_rand( ...
-            C_xx, C_yy, C_xy, D_xy, f, gamma, chlsky, k-1);
+            C_xx, C_yy, C_xy, D_xy, ...
+            f=options.f, gamma=options.gamma, chlsky=options.chlsky, k=k-1);
 
         % --- Store ---
         Wxs(:,k)     = wx;

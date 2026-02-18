@@ -1,5 +1,5 @@
 function [w_x_best, w_y_best, Wxs, Wys, corrs] = ...
-    compute_weights_sparse_multi_rand(C_xx, C_yy, C_xy, D_xy, ff, params)
+    compute_weights_sparse_multi_rand(C_xx, C_yy, C_xy, D_xy, params)
     % COMPUTE_WEIGHTS_SPARSE_MULTI_RAND
     %
     %   Run multiple random initializations of the sparse CCA/CRM solver
@@ -36,8 +36,8 @@ function [w_x_best, w_y_best, Wxs, Wys, corrs] = ...
     %   params : struct of name‑value parameters passed to
     %            compute_weights_sparse_init_rand, including:
     %
-    %       alpha     – step size for D_xy gradient
-    %       beta      – step size for C_xy gradient
+    %       mu        – confound penalty weight (Inf → auto from lambda3)
+    %       step_size – gradient step size (0 → auto from spectral norm)
     %       theta_x   – L1 constraint for w_x (0 → auto‑select)
     %       theta_y   – L1 constraint for w_y (0 → auto‑select)
     %       gamma     – ridge regularization strength
@@ -87,17 +87,17 @@ function [w_x_best, w_y_best, Wxs, Wys, corrs] = ...
         C_yy double {mustBeSquareMatrix(C_yy)}
         C_xy double
         D_xy double
-        ff (1,1) double {mustBePositive}
-        params.alpha (1,1) double {mustBePositive} = 0.001
-        params.beta  (1,1) double {mustBePositive} = 0.001
-        % If NOT provided init as zero 
-        params.theta_x (1,1) double {mustBeNonnegative} = 0; 
+        params.f (1,1) double {mustBePositive} = 1
+        params.mu (1,1) double = Inf              % Inf → auto (use lambda3)
+        params.step_size (1,1) double {mustBeNonnegative} = 0  % 0 → auto (1/L)
+        % If NOT provided init as zero
+        params.theta_x (1,1) double {mustBeNonnegative} = 0;
         params.theta_y (1,1) double {mustBeNonnegative} = 0;
         params.gamma (1,1) double {mustBeNonnegative} = 0
-        params.chlsky (1,1) logical = false
+        params.chlsky (1,1) logical = true
         params.max_iter (1,1) double {mustBeInteger, mustBePositive} = 10000
         params.tol (1,1) double {mustBePositive} = 1e-6
-        params.n_init (1,1) double {mustBePositive, mustBeInteger, mustBeNonnegative} = 10
+        params.n_init (1,1) double {mustBePositive, mustBeInteger} = 10
     end
 
     n_init = params.n_init;
@@ -121,7 +121,7 @@ function [w_x_best, w_y_best, Wxs, Wys, corrs] = ...
 
         % --- Call sparse solver ---
         [wx, wy] = compute_weights_sparse_init_rand( ...
-            C_xx, C_yy, C_xy, D_xy, ff, args{:});
+            C_xx, C_yy, C_xy, D_xy, args{:});
 
         % --- Store ---
         Wxs(:,k) = wx;

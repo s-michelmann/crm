@@ -1,5 +1,5 @@
 function [w_x, w_y, lambda3] = compute_weights_init_rand( ...
-        C_xx, C_yy, C_xy, D_xy, f, gamma, chlsky, k)
+        C_xx, C_yy, C_xy, D_xy, options)
     % COMPUTE_WEIGHTS_INIT_RAND
     %
     %   Compute dense canonical weight vectors (w_x, w_y) for CRM using
@@ -23,7 +23,7 @@ function [w_x, w_y, lambda3] = compute_weights_init_rand( ...
     %
     %   [w_x, w_y, lambda3] = compute_weights_init_rand(C_xx, C_yy, C_xy, D_xy)
     %
-    %   [...] = compute_weights_init_rand(..., f, gamma, chlsky, k)
+    %   [...] = compute_weights_init_rand(..., f=2, gamma=0.01, chlsky=true, k=3)
     %
     % -------------------------------------------------------------------------
     %   INPUTS
@@ -83,11 +83,16 @@ function [w_x, w_y, lambda3] = compute_weights_init_rand( ...
         C_yy double {mustBeSquareMatrix(C_yy)}
         C_xy double
         D_xy double
-        f (1,1) double {mustBePositive} = 1
-        gamma (1,1) double {mustBeNonnegative} = 0
-        chlsky (1,1) logical = false
-        k (1,1) double {mustBeInteger, mustBeNonnegative} = 0
+        options.f (1,1) double {mustBePositive} = 1
+        options.gamma (1,1) double {mustBeNonnegative} = 0
+        options.chlsky (1,1) logical = true
+        options.k (1,1) double {mustBeInteger, mustBeNonnegative} = 0
     end
+
+    f      = options.f;
+    gamma  = options.gamma;
+    chlsky = options.chlsky;
+    k      = options.k;
 
     % --- Regularization ---
     if gamma > 0

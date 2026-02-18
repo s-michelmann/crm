@@ -72,7 +72,7 @@ n_init = 20;
 
 [wxb, wyb, lambda3b, Wxs, Wys, lambdas, corrs] = ...
     compute_weights_multi_rand(C_xx, C_yy, C_xy, D_xy, ...
-                               1, 0, false, n_init);
+        gamma=0, chlsky=false, n_init=n_init);
 
 assert(size(Wxs,2) == n_init)
 assert(size(Wys,2) == n_init)
@@ -105,8 +105,8 @@ fprintf('test_compute_weights_multi_rand passed.\n')
 %  Test compute_weights_sparse_init_rand
 %% -------------------------------------------------------------
 [wxs, wys] = compute_weights_sparse_init_rand( ...
-    C_xx, C_yy, C_xy, D_xy, 1, ...
-    alpha=0.001, beta=0.001, gamma=0, chlsky=true, k=0, max_iter=100000);
+    C_xx, C_yy, C_xy, D_xy, ...
+    gamma=0, k=0, max_iter=100000);
 
 assert(~any(isnan(wxs)))
 assert(~any(isnan(wys)))
@@ -153,8 +153,8 @@ fprintf('test_compute_weights_sparse_init_rand passed.\n')
 n_init = 15;
 
 [w_x_best, w_y_best, Wxs_s, Wys_s, corrs_s]  = ...
-    compute_weights_sparse_multi_rand(C_xx, C_yy, C_xy, D_xy, 1, ...
-    alpha=0.001, beta=0.001, gamma=0.001, chlsky=false, k=0, ...
+    compute_weights_sparse_multi_rand(C_xx, C_yy, C_xy, D_xy, ...
+    gamma=0.001, chlsky=false, ...
     max_iter=100000, n_init=n_init);
 
 assert(size(Wxs_s,2) == n_init)
@@ -212,9 +212,9 @@ fprintf('test_compute_weights_sparse_multi_rand passed.\n')
 fprintf('\n--- Testing Cholesky vs non-Cholesky (dense) ---\n')
 
 [wx_nc, wy_nc] = compute_weights_init_rand(C_xx, C_yy, C_xy, D_xy, ...
-                                           1, 0, false, 1);
+    gamma=0, chlsky=false, k=1);
 [wx_ch, wy_ch] = compute_weights_init_rand(C_xx, C_yy, C_xy, D_xy, ...
-                                           1, 0, true, 1);
+    gamma=0, chlsky=true, k=1);
 
 % Normalize check
 assert(abs(wx_nc' * C_xx * wx_nc - 1) < 1e-6)
@@ -241,10 +241,10 @@ fprintf('Dense Cholesky consistency test passed.\n')
 fprintf('\n--- Testing Cholesky vs non-Cholesky (sparse) ---\n')
 
 [wxs_nc, wys_nc] = compute_weights_sparse_init_rand(C_xx, C_yy, C_xy, D_xy, ...
-    1, alpha=0.001, beta=0.001, gamma=0, chlsky=false, k=1, max_iter=500);
+    gamma=0, chlsky=false, k=1, max_iter=500);
 
 [wxs_ch, wys_ch] = compute_weights_sparse_init_rand(C_xx, C_yy, C_xy, D_xy, ...
-    1, alpha=0.001, beta=0.001, gamma=0, chlsky=true,  k=1, max_iter=500);
+    gamma=0, chlsky=true, k=1, max_iter=500);
 
 % Determine global sign
 sgn = sign(wxs_nc' * wxs_ch);
@@ -275,15 +275,15 @@ for gi = 1:length(gamma_values)
 
     %% --- Dense version ---
     [wx_d, wy_d] = compute_weights_init_rand( ...
-        C_xx, C_yy, C_xy, D_xy, 1, gamma_test, false, 1);
+        C_xx, C_yy, C_xy, D_xy, gamma=gamma_test, chlsky=false, k=1);
 
     corrs_dense(gi) = wx_d' * C_xy * wy_d;
     conf_dense(gi)  = wx_d' * D_xy * wy_d;
 
     %% --- Sparse version ---
     [wx_s, wy_s] = compute_weights_sparse_init_rand( ...
-        C_xx, C_yy, C_xy, D_xy, 1, ...
-        alpha=0.001, beta=0.001, gamma=gamma_test, chlsky=false, k=1, max_iter=50000);
+        C_xx, C_yy, C_xy, D_xy, ...
+        gamma=gamma_test, chlsky=false, k=1, max_iter=50000);
 
     corrs_sparse(gi) = wx_s' * C_xy * wy_s;
     conf_sparse(gi)  = wx_s' * D_xy * wy_s;

@@ -12,7 +12,7 @@ function is_unique = is_unique_component_sparse(w_new, W_existing, tol, rnz)
     if nargin < 4
         rnz = 0.15; % medium sparsity
     end
-    if nargin < 3
+    if nargin < 3 || isempty(tol)  
         tol = sqrt(2/(rnz*length(w_new)));
     end
 
