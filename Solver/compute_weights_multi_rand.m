@@ -62,8 +62,11 @@ function [w_x_best, w_y_best, lambda3_best, Wxs, Wys, lambdas, corrs] = ...
     %
     %   • Each initialization uses seed (k‑1)
     %
-    %   • The "best" solution is defined as the one with the largest
-    %         corr = real(w_x' * C_xy * w_y)
+    %   • The "best" solution is selected by first checking which inits
+    %     achieved low confound |w_x' * D_xy * w_y| (constraint satisfied),
+    %     then picking the highest signal among those.  This prevents
+    %     unconstrained CCA-like solutions from being preferred over
+    %     proper CRM solutions that satisfy the orthogonality constraint.
     %
     %   • All solutions are returned for inspection of variability
     %     across random starts.
@@ -119,8 +122,27 @@ function [w_x_best, w_y_best, lambda3_best, Wxs, Wys, lambdas, corrs] = ...
 
     fprintf('\n');
 
-    % --- Pick best ---
-    [~, idx_best] = max(corrs);
+    % --- Pick best: minimize confound, then maximize signal ---
+    %
+    %  The CRM constraint requires w_x' * D_xy * w_y = 0.  Different
+    %  random inits may converge to different local optima of fminsearch:
+    %  some satisfy the constraint (low confound), others settle near the
+    %  unconstrained CCA solution (high signal, high confound).
+    %
+    %  Selection logic:
+    %    1. Compute |confound| for each init.
+    %    2. Find the best (lowest) confound achieved.
+    %    3. Accept inits within 10× of that best (numerical slack).
+    %    4. Among accepted inits, pick the one with highest signal.
+    confounds = arrayfun(@(k) abs(Wxs(:,k)' * D_xy * Wys(:,k)), 1:n_init);
+    min_conf  = min(confounds);
+    tol       = max(min_conf * 10, 1e-8);
+    valid     = (confounds <= tol);
+
+    corrs_valid = corrs;
+    corrs_valid(~valid) = -Inf;
+    [~, idx_best] = max(corrs_valid);
+
     w_x_best     = Wxs(:,idx_best);
     w_y_best     = Wys(:,idx_best);
     lambda3_best = lambdas(idx_best);

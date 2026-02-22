@@ -68,8 +68,11 @@ function [w_x_best, w_y_best, Wxs, Wys, corrs] = ...
     %   • If theta_x/theta_y are zero, sparsity levels are chosen
     %     automatically using choose_sparsity(), following Witten et al.
     %
-    %   • The "best" sparse solution is the one with the largest
-    %         corr = real(w_x' * C_xy * w_y)
+    %   • The "best" solution is selected by first checking which inits
+    %     achieved low confound |w_x' * D_xy * w_y| (constraint satisfied),
+    %     then picking the highest signal among those.  This prevents
+    %     unconstrained CCA-like solutions from being preferred over
+    %     proper CRM solutions that satisfy the orthogonality constraint.
     %
     %   • All solutions are returned so the user can inspect variability
     %     across random starts or perform stability analysis.
@@ -138,8 +141,27 @@ function [w_x_best, w_y_best, Wxs, Wys, corrs] = ...
 
     fprintf('\n');
 
-    % --- Pick best ---
-    [~, idx_best] = max(corrs);
+    % --- Pick best: minimize confound, then maximize signal ---
+    %
+    %  The CRM constraint requires w_x' * D_xy * w_y = 0.  Different
+    %  random inits may converge to different local optima:
+    %  some satisfy the constraint (low confound), others settle near the
+    %  unconstrained CCA solution (high signal, high confound).
+    %
+    %  Selection logic:
+    %    1. Compute |confound| for each init.
+    %    2. Find the best (lowest) confound achieved.
+    %    3. Accept inits within 10× of that best (numerical slack).
+    %    4. Among accepted inits, pick the one with highest signal.
+    confounds = arrayfun(@(k) abs(Wxs(:,k)' * D_xy * Wys(:,k)), 1:n_init);
+    min_conf  = min(confounds);
+    tol       = max(min_conf * 10, 1e-8);
+    valid     = (confounds <= tol);
+
+    corrs_valid = corrs;
+    corrs_valid(~valid) = -Inf;
+    [~, idx_best] = max(corrs_valid);
+
     w_x_best = Wxs(:,idx_best);
     w_y_best = Wys(:,idx_best);
 end
