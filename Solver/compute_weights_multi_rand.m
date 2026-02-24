@@ -45,6 +45,23 @@ function [w_x_best, w_y_best, lambda3_best, Wxs, Wys, lambdas, corrs] = ...
     %
     %   n_init : number of random initializations (default = 10)
     %
+    %   rank_ratio_thresh : scalar (default = NaN → auto)
+    %            Controls how the best init is selected.  The solver
+    %            computes rank(C_xy) / rank(D_xy).  When this ratio exceeds
+    %            the threshold, the signal subspace is much larger than the
+    %            confound subspace, so strict confound‑first selection is
+    %            used (low confound, then max signal).  Below the threshold,
+    %            the subspaces nearly overlap, so diff‑based selection is
+    %            used instead (max signal − |confound|), tolerating some
+    %            confound for higher signal.
+    %
+    %            NaN (default): auto‑compute threshold as 2, i.e. switch to
+    %            diff‑based selection (max signal − |confound|) when
+    %            rank(C_xy) < 2 × rank(D_xy), meaning the excess rank
+    %            (signal directions beyond the confound) is less than the
+    %            confound rank itself.  The difference score avoids ratio
+    %            blow‑up when confound fluctuates near zero.
+    %
     % -------------------------------------------------------------------------
     %   OUTPUTS
     %
@@ -62,11 +79,11 @@ function [w_x_best, w_y_best, lambda3_best, Wxs, Wys, lambdas, corrs] = ...
     %
     %   • Each initialization uses seed (k‑1)
     %
-    %   • The "best" solution is selected by first checking which inits
-    %     achieved low confound |w_x' * D_xy * w_y| (constraint satisfied),
-    %     then picking the highest signal among those.  This prevents
-    %     unconstrained CCA-like solutions from being preferred over
-    %     proper CRM solutions that satisfy the orthogonality constraint.
+    %   • The "best" solution is selected adaptively based on the rank
+    %     ratio of C_xy and D_xy (see rank_ratio_thresh).  When the signal
+    %     subspace is large relative to the confound, confound‑first
+    %     selection is used.  When data is limited and subspaces overlap,
+    %     diff‑based selection (signal − |confound|) is used instead.
     %
     %   • All solutions are returned for inspection of variability
     %     across random starts.
@@ -86,6 +103,7 @@ function [w_x_best, w_y_best, lambda3_best, Wxs, Wys, lambdas, corrs] = ...
         options.gamma (1,1) double {mustBeNonnegative} = 0
         options.chlsky (1,1) logical = true
         options.n_init (1,1) double {mustBeInteger, mustBePositive} = 10
+        options.rank_ratio_thresh (1,1) double = NaN   % NaN → auto (default = 2)
     end
 
     n_init = options.n_init;
@@ -122,30 +140,60 @@ function [w_x_best, w_y_best, lambda3_best, Wxs, Wys, lambdas, corrs] = ...
 
     fprintf('\n');
 
-    % --- Pick best: minimize confound, then maximize signal ---
+    % --- Pick best: adaptive selection based on rank ratio ---
     %
-    %  The CRM constraint requires w_x' * D_xy * w_y = 0.  Different
-    %  random inits may converge to different local optima of fminsearch:
-    %  some satisfy the constraint (low confound), others settle near the
-    %  unconstrained CCA solution (high signal, high confound).
+    %  Compute numerical rank of C_xy and D_xy to assess how much room
+    %  CRM has to satisfy the constraint without sacrificing signal.
     %
-    %  Selection logic:
-    %    1. Compute |confound| for each init.
-    %    2. Find the best (lowest) confound achieved.
-    %    3. Accept inits within 10× of that best (numerical slack).
-    %    4. Among accepted inits, pick the one with highest signal.
+    %  High rank ratio (rank_cxy >> rank_dxy):
+    %    Signal subspace much larger than confound → strict confound‑first
+    %    selection.  Filter for low |confound|, then pick max signal.
+    %
+    %  Low rank ratio (rank_cxy ≈ rank_dxy):
+    %    Subspaces nearly overlap → enforcing confound = 0 eliminates most
+    %    signal directions.  Use diff‑based selection (max signal − |confound|)
+    %    to tolerate some confound for better signal.
     confounds = arrayfun(@(k) abs(Wxs(:,k)' * D_xy * Wys(:,k)), 1:n_init);
-    min_conf  = min(confounds);
-    tol       = max(min_conf * 10, 1e-8);
-    valid     = (confounds <= tol);
 
-    corrs_valid = corrs;
-    corrs_valid(~valid) = -Inf;
-    [~, idx_best] = max(corrs_valid);
+    % Numerical rank (SVD, tolerance = max(size) * eps(norm))
+    rank_cxy = rank(C_xy);
+    rank_dxy = max(rank(D_xy), 1);
+    rank_ratio = rank_cxy / rank_dxy;
+
+    % Determine threshold
+    if isnan(options.rank_ratio_thresh)
+        rr_thresh = 2;   % auto: switch when excess rank < confound rank
+    else
+        rr_thresh = options.rank_ratio_thresh;
+    end
+
+    if rank_ratio >= rr_thresh
+        % --- High capacity: confound‑first, then max signal ---
+        min_conf = min(confounds);
+        tol      = max(min_conf * 10, 1e-8);
+        valid    = (confounds <= tol);
+
+        score = corrs;
+        score(~valid) = -Inf;
+        select_mode = 'confound-first';
+    else
+        % --- Low capacity: max (signal − |confound|) ---
+        %  Use difference rather than ratio to avoid blow‑up when confound
+        %  fluctuates near zero.  Small confound differences in the noise
+        %  band have proportionally small effect on the score; signal
+        %  dominates when confound suppression is already good.
+        score = corrs - confounds;
+        select_mode = 'diff';
+    end
+
+    [~, idx_best] = max(score);
 
     w_x_best     = Wxs(:,idx_best);
     w_y_best     = Wys(:,idx_best);
     lambda3_best = lambdas(idx_best);
+
+    fprintf('  rank(C_xy)=%d, rank(D_xy)=%d, ratio=%.1f → %s selection\n', ...
+        rank_cxy, rank_dxy, rank_ratio, select_mode);
 end
 
 function mustBeSquareMatrix(M)

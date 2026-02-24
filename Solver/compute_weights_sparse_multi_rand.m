@@ -45,6 +45,8 @@ function [w_x_best, w_y_best, Wxs, Wys, corrs] = ...
     %       max_iter  – maximum number of gradient iterations
     %       tol       – convergence tolerance
     %       n_init    – number of random initializations
+    %       rank_ratio_thresh – scalar (NaN → auto = 2).  See
+    %                   compute_weights_multi_rand for full description.
     %
     % -------------------------------------------------------------------------
     %   OUTPUTS
@@ -68,11 +70,11 @@ function [w_x_best, w_y_best, Wxs, Wys, corrs] = ...
     %   • If theta_x/theta_y are zero, sparsity levels are chosen
     %     automatically using choose_sparsity(), following Witten et al.
     %
-    %   • The "best" solution is selected by first checking which inits
-    %     achieved low confound |w_x' * D_xy * w_y| (constraint satisfied),
-    %     then picking the highest signal among those.  This prevents
-    %     unconstrained CCA-like solutions from being preferred over
-    %     proper CRM solutions that satisfy the orthogonality constraint.
+    %   • The "best" solution is selected adaptively based on the rank
+    %     ratio of C_xy and D_xy (see rank_ratio_thresh).  When the signal
+    %     subspace is large relative to the confound, confound‑first
+    %     selection is used.  When data is limited and subspaces overlap,
+    %     diff‑based selection (signal − |confound|) is used instead.
     %
     %   • All solutions are returned so the user can inspect variability
     %     across random starts or perform stability analysis.
@@ -101,6 +103,7 @@ function [w_x_best, w_y_best, Wxs, Wys, corrs] = ...
         params.max_iter (1,1) double {mustBeInteger, mustBePositive} = 10000
         params.tol (1,1) double {mustBePositive} = 1e-6
         params.n_init (1,1) double {mustBePositive, mustBeInteger} = 10
+        params.rank_ratio_thresh (1,1) double = NaN   % NaN → auto (default = 2)
     end
 
     n_init = params.n_init;
@@ -116,8 +119,8 @@ function [w_x_best, w_y_best, Wxs, Wys, corrs] = ...
 
     for k = 1:n_init
 
-        % --- Set seed for this init ---
-        params_k = rmfield(params, 'n_init');
+        % --- Set seed for this init (strip wrapper-only params) ---
+        params_k = rmfield(params, {'n_init', 'rank_ratio_thresh'});
 
         params_k.k = k-1; % always start at zero
         args = namedargs2cell(params_k);
@@ -141,29 +144,43 @@ function [w_x_best, w_y_best, Wxs, Wys, corrs] = ...
 
     fprintf('\n');
 
-    % --- Pick best: minimize confound, then maximize signal ---
-    %
-    %  The CRM constraint requires w_x' * D_xy * w_y = 0.  Different
-    %  random inits may converge to different local optima:
-    %  some satisfy the constraint (low confound), others settle near the
-    %  unconstrained CCA solution (high signal, high confound).
-    %
-    %  Selection logic:
-    %    1. Compute |confound| for each init.
-    %    2. Find the best (lowest) confound achieved.
-    %    3. Accept inits within 10× of that best (numerical slack).
-    %    4. Among accepted inits, pick the one with highest signal.
+    % --- Pick best: adaptive selection based on rank ratio ---
     confounds = arrayfun(@(k) abs(Wxs(:,k)' * D_xy * Wys(:,k)), 1:n_init);
-    min_conf  = min(confounds);
-    tol       = max(min_conf * 10, 1e-8);
-    valid     = (confounds <= tol);
 
-    corrs_valid = corrs;
-    corrs_valid(~valid) = -Inf;
-    [~, idx_best] = max(corrs_valid);
+    % Numerical rank (SVD, tolerance = max(size) * eps(norm))
+    rank_cxy = rank(C_xy);
+    rank_dxy = max(rank(D_xy), 1);
+    rank_ratio = rank_cxy / rank_dxy;
+
+    % Determine threshold
+    if isnan(params.rank_ratio_thresh)
+        rr_thresh = 2;   % auto: switch when excess rank < confound rank
+    else
+        rr_thresh = params.rank_ratio_thresh;
+    end
+
+    if rank_ratio >= rr_thresh
+        % --- High capacity: confound‑first, then max signal ---
+        min_conf = min(confounds);
+        tol      = max(min_conf * 10, 1e-8);
+        valid    = (confounds <= tol);
+
+        score = corrs;
+        score(~valid) = -Inf;
+        select_mode = 'confound-first';
+    else
+        % --- Low capacity: max (signal − |confound|) ---
+        score = corrs - confounds;
+        select_mode = 'diff';
+    end
+
+    [~, idx_best] = max(score);
 
     w_x_best = Wxs(:,idx_best);
     w_y_best = Wys(:,idx_best);
+
+    fprintf('  rank(C_xy)=%d, rank(D_xy)=%d, ratio=%.1f → %s selection\n', ...
+        rank_cxy, rank_dxy, rank_ratio, select_mode);
 end
 
 function mustBeSquareMatrix(M)
