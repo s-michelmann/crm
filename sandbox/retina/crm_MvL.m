@@ -48,7 +48,7 @@ l_long = reshape(l_signal,216*216,9750)';
 save("./pcaresults_ML.mat",'-v7.3')
 
 %%
-% load("./pcaresults_ML.mat")
+load("./pcaresults_ML.mat")
 
 top_latents_m = score(1:9750,1:500);
 top_latents_l = score(9751:end,1:500);
@@ -108,7 +108,7 @@ X = (X - mean(X(:))) ./ std(X(:));
 Y = top_latents_l(751:9750,:)'; % chop off first 5s frames
 
 S = X;
-T = top_latents_l(751:9750,:)' + top_latents_m(751:9750,:)';
+T = 0*top_latents_l(751:9750,:)' + top_latents_m(751:9750,:)';
 
 C_xy = X*Y';
 C_xx = X*X';
@@ -187,3 +187,42 @@ hold on;
 plot([1e-4,7e-4],[0,0], 'k--')
 xlabel("weights CCA")
 ylabel("weights CRM")
+
+
+%% Sebastian's analysis
+
+% load('matlab_flowershow_l.mat')
+% load('matlab_flowershow_m.mat')
+
+M = zeros(216,216);
+N = zeros(216,216);
+
+for i = 1:216
+    disp(i)
+    for j = 1:216
+        ts = l_cone(i,j, 751:9750);
+
+        cc = corrcoef(w_y1'*Y, ts);
+        M(i,j) = cc(2,1);
+
+        cc = corrcoef(w_y2'*Y, ts);
+        N(i,j) = cc(2,1);
+    end
+end
+
+figure(2),clf;
+subplot(1,2,1)
+imagesc(M)
+title("corr(l,wl) per pixel, D=0")
+colormap(c)
+clim([-1,1])
+colorbar;
+daspect([1 1 1])
+
+subplot(1,2,2)
+imagesc(N)
+title("corr(l,wl) per pixel, D=lum")
+colormap(c)
+clim([-1,1])
+colorbar;
+daspect([1 1 1])
