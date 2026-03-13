@@ -1,5 +1,6 @@
 function [r_wx, r_wy, r_lam, wxcxywy, wxdxywy, wxcxxwx, wycyywy] = compute_weights_full(C_xx, C_yy, C_xy, D_xy)
-
+    % legacy function. Call compute_weights_sparse_multi_rand with 10,000
+    % random initializations.
     list_lbd3s = [];
     list_wx = [];
     list_wy = [];
