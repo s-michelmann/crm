@@ -41,8 +41,8 @@ for ss = 1 : 22
 
     load(fullfile(sj_path, 'correlationMatrix_raw'));
     % load(fullfile(sj_path, 'correlationMatrix_schema'));
-    load(fullfile(sj_path, 'correlationMatrix_episode'));
-    load(fullfile(sj_path, 'correlationMatrix_context'));
+    load(fullfile(sj_path, 'correlationMatrix_episode_cv'));
+    load(fullfile(sj_path, ['correlationMatrix_context_cv']));
 
 
     mat_avg= cat(3, mat_avg, avgCorrMatrix);

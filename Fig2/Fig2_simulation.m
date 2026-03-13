@@ -1,6 +1,12 @@
-close all;
-clear all;
+clear;
+clc;
+close all
+restoredefaultpath;
+homeDir  = getenv('HOME');
 
+
+
+dir_code = "crm_canon_prev_word_10fold_parCCA";
 tic % around 3h use
 
 rng(1)

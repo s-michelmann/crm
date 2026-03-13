@@ -35,7 +35,7 @@ corrcoef(w_x'*X, w_y'*irrelevant_signal) %should be small
 corrcoef(w_x'*X, w_y'*Y) %should be large
 
 
-% Method 2: CRM  
+% Method 2: CRM
 D_xy = S*T';
 [w_x, w_y, lambda3] = compute_weights(C_xx, C_yy, C_xy, D_xy);
 disp("CRM")

@@ -25,17 +25,10 @@ C_yy = (Y' * Y) / n_samples;
 C_xy = (X' * Y) / n_samples;
 D_xy = d_x_true * d_y_true'; 
 
-% Sparse CRM Parameters
-params.theta_x = 1;  % Sparsity constraint (lower = sparser)
-params.theta_y = 5;
-params.alpha = 0.05;    % Weight for the push away from D_xy
-params.beta = 0.05;     % Weight for the pull toward C_xy
-params.max_iter = 500;
-params.tol = 1e-5;
-params.gamma = 0;    % Seb's Ridge term. For good measure
-
 % Running sparse CRM + Plot
-[w_x, w_y] = compute_weights_sparse(C_xx, C_yy, C_xy, D_xy, params);
+[w_x, w_y] = compute_weights_sparse(C_xx, C_yy, C_xy, D_xy, ...
+    theta_x=1, theta_y=5, ...
+    max_iter=500, tol=1e-5, gamma=0);
 
 figure(1),clf;
 

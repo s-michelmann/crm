@@ -214,7 +214,7 @@ for ss = 1 : 22
     for ff = 1 : num_components
         ff
         [w_x, w_y, lbd3i] = compute_weights(Cov_xx_sameEpisode, ...
-            Cov_yy_sameEpisode, Cov_sameEpisode, Cov_samePlaceDifferenPerson, ff, 0.001);
+            Cov_yy_sameEpisode, Cov_sameEpisode, Cov_samePlaceDifferenPerson, f=ff, gamma=0.001);
         if ~ isreal(w_x); continue; end
         if ~ isreal(w_y); continue; end
 

@@ -39,6 +39,18 @@ words = dataTable.word;
 embeddings = feature_data';
 num_components = 50; % 50 components of embeddings
 
+% %% select every other word!!
+step_size = 4;
+words  = words(1:step_size:end);
+word_onsets = word_onsets(1:step_size:end);
+embeddings = embeddings(1:step_size:end,:);
+%% pca embeddings down to 50/100;
+[coeff, score, latent] = pca(embeddings);
+reduced_array = score(:, 1:num_components);
+
+
+% epoched_features = epoched_features(1:step_size:end,:,:);
+
 %% load in a subject
 for ss = 1: 9
     sub_code = ['sub-0' num2str(ss)];
@@ -103,10 +115,10 @@ for ss = 1: 9
     eeg = ft_resampledata(cfg, eeg);
     eeg.sampleinfo = [1 length(eeg.time{1})];
 
+
+
     % Validate the EEG structure using ft_datatype_raw
-    %% pca embeddings down to 50/100;
-    [coeff, score, latent] = pca(embeddings);
-    reduced_array = score(:, 1:num_components);
+  
 
     % start at word 21 (we want 10 seconds of padding +)
     n_word_padding = 20;
@@ -175,12 +187,23 @@ for ss = 1: 9
     for ll = 1 : n_steps
         fprintf('at %d percent\r', round(100 * ll / n_steps));
        
-        cv = cvpartition(n_words, 'KFold', num_iterations);
+        % cv = cvpartition(n_words, 'KFold', num_iterations);
+
+        K = num_iterations;
+        block_size = ceil(n_words / K);
+        blocks = repelem(1:K, block_size);
+        blocks = blocks(1:n_words);
 
         for idx = 1:num_iterations
             % Get train and test indices for the current iteration
-            train_indices{idx} = cv.training(idx);
-            test_indices{idx} = cv.test(idx);
+            % train_indices{idx} = cv.training(idx);
+            % test_indices{idx} = cv.test(idx);
+
+            train_indices{idx} = blocks == idx;
+            choices = 1:num_iterations;
+            choices(idx) = [];
+            test_indices{idx} = blocks == choices(randi(length(choices)));
+
 
             % Split the data
             eeg_train = eeg_dat(train_indices{idx}, :, ll);
@@ -190,8 +213,8 @@ for ss = 1: 9
 
             embeddings_train_ctrl = emb_words_circ(train_indices{idx}, :);
             embeddings_test_ctrl = emb_words_circ(test_indices{idx}, :);
-
-
+            
+            
             Cxx = eeg_train' * eeg_train;
             Cyy = embeddings_train' * embeddings_train;
             Cxy = eeg_train' * embeddings_train;
@@ -203,11 +226,11 @@ for ss = 1: 9
 
             Dxy_par = -Dxy*inv(Czz)*Czy;
 
-            [Wx, Wy, ~]  = compute_weights(Cxx,Cyy,Cxy, zeros(size(Cxy)),1, 0.001);
+            [Wx, Wy, ~]  = compute_weights(Cxx,Cyy,Cxy, zeros(size(Cxy)), gamma=0.05);
 
-            [Vx, Vy, lbd3i] = compute_weights(Cxx,Cyy,Cxy, Dxy,1, 0.001);
+            [Vx, Vy, lbd3i] = compute_weights(Cxx,Cyy,Cxy, Dxy, gamma=0.05);
 
-            [Ux, Uy, ~] = compute_weights(Cxx,Cyy,Cxy, Dxy_par,1, 0.001);
+            [Ux, Uy, ~] = compute_weights(Cxx,Cyy,Cxy, Dxy_par, gamma=0.05);
 
 
             r1_canon(idx, ll) = corr(eeg_test*Wx, embeddings_test* Wy);
@@ -239,7 +262,7 @@ for ss = 1: 9
     results.r1_crm_control = r1_crm_control;
     results.r1_par_cca_control = r1_par_cca_control;
 
-    save_file = fullfile(deriv_path, "results_gamma50Fin.mat");
+    save_file = fullfile(deriv_path, "results_gamma50_blockVal_step4.mat");
     save(save_file, "results");
 end
 
@@ -260,7 +283,7 @@ for sub = 1:9
     sub_code = sprintf('sub-%02d', sub);
     deriv_path = fullfile(data_path,  "derivatives",...
         dir_code, sub_code);
-    load(fullfile(deriv_path, ['results_gamma50Fin.mat']), 'results');
+    load(fullfile(deriv_path, ['results_gamma50_blockVal_step4.mat']), 'results');
     
     % Concatenate results across subjects
     % Average across folds
@@ -308,14 +331,14 @@ hold on;
 set(gcf, 'Color', 'w');
 
 % Plot canonical correlation results
-shadedErrorBar([-4:1/fsample:4], mean_r1_canon, std_r1_canon, 'lineprops', {'-','Color','#1565C0 '}, 'patchSaturation', 0.1);
-shadedErrorBar([-4:1/fsample:4], mean_r1_crm, std_r1_crm, 'lineprops', {'-','Color','#C21807'}, 'patchSaturation', 0.1);
-shadedErrorBar([-4:1/fsample:4], mean_r1_par_cca, std_r1_par_cca, 'lineprops', {'-','Color','#F4B400'}, 'patchSaturation', 0.1);
+shadedErrorBar([-4:1/fsample:4], smoothdata(mean_r1_canon), smoothdata(std_r1_canon), 'lineprops', {'-','Color','#1565C0 '}, 'patchSaturation', 0.1);
+shadedErrorBar([-4:1/fsample:4], smoothdata(mean_r1_crm), smoothdata(std_r1_crm), 'lineprops', {'-','Color','#C21807'}, 'patchSaturation', 0.1);
+shadedErrorBar([-4:1/fsample:4], smoothdata(mean_r1_par_cca), smoothdata(std_r1_par_cca), 'lineprops', {'-','Color','#F4B400'}, 'patchSaturation', 0.1);
 
 % % Plot control results #244F4B
-shadedErrorBar([-4:1/fsample:4], mean_r1_canon_control, std_r1_canon_control, 'lineprops', {'--','Color','#00897B '}, 'patchSaturation', 0.1);
-shadedErrorBar([-4:1/fsample:4], mean_r1_crm_control, std_r1_crm_control, 'lineprops', {'--','Color','#7B1FA2'}, 'patchSaturation', 0.1);
-shadedErrorBar([-4:1/fsample:4], mean_r1_par_cca_control, std_r1_par_cca_control, 'lineprops', {'-','Color','#E65100'}, 'patchSaturation', 0.1);
+shadedErrorBar([-4:1/fsample:4], smoothdata(mean_r1_canon_control), smoothdata(std_r1_canon_control), 'lineprops', {'--','Color','#00897B '}, 'patchSaturation', 0.1);
+shadedErrorBar([-4:1/fsample:4], smoothdata(mean_r1_crm_control), smoothdata(std_r1_crm_control), 'lineprops', {'--','Color','#7B1FA2'}, 'patchSaturation', 0.1);
+shadedErrorBar([-4:1/fsample:4], smoothdata(mean_r1_par_cca_control), smoothdata(std_r1_par_cca_control), 'lineprops', {'-','Color','#E65100'}, 'patchSaturation', 0.1);
 
 % Set font size and type
 set(gca, 'FontSize', 16, 'FontName', 'Helvetica');
