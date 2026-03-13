@@ -1,97 +1,122 @@
-function [w_x, w_y, lambda3] = compute_weights(C_xx, C_yy, C_xy, D_xy, options)
-%COMPUTE_WEIGHTS  Single-solution CRM weight vectors.
+function [w_x, w_y, lambda3, Wxs, Wys, lambdas, corrs] = ...
+    compute_weights(C_xx, C_yy, C_xy, D_xy, options)
+%COMPUTE_WEIGHTS  Unified CRM solver — dispatches to the appropriate sub-function.
 %
 %   [w_x, w_y, lambda3] = compute_weights(C_xx, C_yy, C_xy, D_xy)
-%   [w_x, w_y, lambda3] = compute_weights(..., f=2, gamma=0.01, chlsky=true)
+%   [w_x, w_y, lambda3] = compute_weights(..., gamma=0.05)
+%   [w_x, w_y, lambda3, Wxs, Wys, lambdas, corrs] = compute_weights(..., n_init=5)
+%   [w_x, w_y] = compute_weights(..., sparsity=0.7)
+%   [w_x, w_y, ~, Wxs, Wys, ~, corrs] = compute_weights(..., sparsity=0.7, n_init=5)
+%
+%   Dispatch logic:
+%     sparse + multi-init  → compute_weights_sparse_multi_rand
+%     sparse + single-init → compute_weights_sparse_init_rand
+%     dense  + multi-init  → compute_weights_multi_rand
+%     dense  + single-init → compute_weights_init_rand          (DEFAULT)
+%
+%   Sparse mode is triggered when sparsity, theta_x, or theta_y is set.
+%
+%   See also compute_weights_init_rand, compute_weights_multi_rand,
+%            compute_weights_sparse_init_rand, compute_weights_sparse_multi_rand
 
     arguments
         C_xx double {mustBeSquareMatrix(C_xx)}
         C_yy double {mustBeSquareMatrix(C_yy)}
         C_xy double
         D_xy double
+        % --- Common ---
         options.f (1,1) double {mustBePositive} = 1
         options.gamma (1,1) double {mustBeNonnegative} = 0
         options.chlsky (1,1) logical = true
+        % --- Multi-init ---
+        options.n_init (1,1) double {mustBeInteger, mustBePositive} = 1
+        options.rank_ratio_thresh (1,1) double = NaN
+        % --- Sparse (any non-default triggers sparse path) ---
+        options.sparsity (1,1) double = NaN
+        options.theta_x (1,1) double {mustBeNonnegative} = 0
+        options.theta_y (1,1) double {mustBeNonnegative} = 0
+        options.mu (1,1) double = Inf
+        options.step_size (1,1) double {mustBeNonnegative} = 0
+        options.max_iter (1,1) double {mustBeInteger, mustBePositive} = 10000
+        options.tol (1,1) double {mustBePositive} = 1e-6
     end
 
-    f      = options.f;
-    gamma  = options.gamma;
-    chlsky = options.chlsky;
+    is_sparse = ~isnan(options.sparsity) || options.theta_x > 0 || options.theta_y > 0;
 
-    % --- Regularization ---
-    if gamma > 0
-        C_xx = C_xx + gamma * eye(size(C_xx,1));
-        C_yy = C_yy + gamma * eye(size(C_yy,1));
-    end
+    % --- Initialize optional multi-init outputs ---
+    Wxs = []; Wys = []; lambdas = []; corrs = [];
 
-    if ~chlsky
-        fun = @(l) foo2(C_xx, C_yy, C_xy, D_xy, l, f);
-        lambda3 = fminsearch(fun, 0);
+    if is_sparse && options.n_init > 1
+        % ---- Sparse multi-init ----
+        args = build_sparse_multi_args(options);
+        [w_x, w_y, Wxs, Wys, corrs] = ...
+            compute_weights_sparse_multi_rand(C_xx, C_yy, C_xy, D_xy, args{:});
+        lambda3 = NaN;
 
-        M = inv(C_xx) * (C_xy + lambda3*D_xy) * inv(C_yy) * (C_xy + lambda3*D_xy)';
-        [W, D] = eigs(M, f, 'lr');
-        w_x = W(:,f);
-        w_x = w_x ./ sqrt(w_x' * C_xx * w_x);
-        lbd = sqrt(D(f,f));
-        w_y = -inv(C_yy) * (C_xy + lambda3*D_xy)' / lbd * w_x;
+    elseif is_sparse
+        % ---- Sparse single-init ----
+        args = build_sparse_args(options);
+        [w_x, w_y] = ...
+            compute_weights_sparse_init_rand(C_xx, C_yy, C_xy, D_xy, args{:});
+        lambda3 = NaN;
+
+    elseif options.n_init > 1
+        % ---- Dense multi-init ----
+        args = build_multi_args(options);
+        [w_x, w_y, lambda3, Wxs, Wys, lambdas, corrs] = ...
+            compute_weights_multi_rand(C_xx, C_yy, C_xy, D_xy, args{:});
 
     else
-        % --- Cholesky factors (avoid inv) ---
-        [Lx, pflag] = chol(C_xx, 'lower');
-        [Ly, qflag] = chol(C_yy, 'lower');
-        if pflag || qflag
-            error('C_xx/C_yy not SPD. Increase gamma.');
-        end
-
-        fun = @(l) foo3(Lx, Ly, C_xy, D_xy, l, f);
-        lambda3 = fminsearch(fun, 0);
-
-        K = (Lx \ (C_xy + lambda3 * D_xy)) / Ly';
-        M = K * K';
-
-        opts.isreal = true;
-        [W, D] = eigs(M, f, 'lr', opts);
-        vx = W(:,end);
-
-        w_x = Lx' \ vx;
-        w_x = w_x ./ sqrt(w_x' * C_xx * w_x);
-
-        lbd = sqrt(D(end,end));
-        rhs = (C_xy + lambda3 * D_xy)' * w_x;
-        w_y = -(C_yy \ rhs) / lbd;
-    end
-
-    if w_x' * C_xy * w_y < 0
-        w_y = -w_y;
+        % ---- Dense single-init (DEFAULT) ----
+        [w_x, w_y, lambda3] = compute_weights_init_rand( ...
+            C_xx, C_yy, C_xy, D_xy, ...
+            f=options.f, gamma=options.gamma, chlsky=options.chlsky, k=0);
     end
 end
 
 
-function tst = foo2(C_xx, C_yy, C_xy, D_xy, lbd3, f)
-    M = inv(C_xx)*(C_xy+lbd3*D_xy)*inv(C_yy)*((C_xy+lbd3*D_xy)');
-    [W,D] = eigs(M,f,'lr');
-    w_x = W(:,f);
-    w_x = w_x./sqrt(w_x'*C_xx*w_x);
-    w_y = inv(C_yy)*(C_xy+lbd3*D_xy)'*w_x;
-    tst = abs(w_x'*D_xy*w_y);
+% =========================================================================
+%  Helper functions — strip irrelevant options for each sub-function
+% =========================================================================
+
+function args = build_multi_args(opts)
+    s.f      = opts.f;
+    s.gamma  = opts.gamma;
+    s.chlsky = opts.chlsky;
+    s.n_init = opts.n_init;
+    s.rank_ratio_thresh = opts.rank_ratio_thresh;
+    args = namedargs2cell(s);
 end
 
+function args = build_sparse_args(opts)
+    s.f         = opts.f;
+    s.gamma     = opts.gamma;
+    s.chlsky    = opts.chlsky;
+    s.mu        = opts.mu;
+    s.step_size = opts.step_size;
+    s.sparsity  = opts.sparsity;
+    s.theta_x   = opts.theta_x;
+    s.theta_y   = opts.theta_y;
+    s.max_iter  = opts.max_iter;
+    s.tol       = opts.tol;
+    s.k         = 0;
+    args = namedargs2cell(s);
+end
 
-function tst = foo3(Lx, Ly, C_xy, D_xy, lbd3, f)
-    K = (Lx \ (C_xy + lbd3 * D_xy)) / Ly';
-    M = K * K';
-
-    opts.isreal = true;
-    [W,~] = eigs(M, f, 'lr', opts);
-    vx = W(:,end);
-
-    w_x = Lx' \ vx;
-    w_x = w_x ./ max(norm(w_x), 1e-12);
-
-    rhs = (C_xy + lbd3 * D_xy)' * w_x;
-    w_y = Ly \ (Ly' \ rhs);
-
-    tst = abs(w_x' * D_xy * w_y);
+function args = build_sparse_multi_args(opts)
+    s.f         = opts.f;
+    s.gamma     = opts.gamma;
+    s.chlsky    = opts.chlsky;
+    s.mu        = opts.mu;
+    s.step_size = opts.step_size;
+    s.sparsity  = opts.sparsity;
+    s.theta_x   = opts.theta_x;
+    s.theta_y   = opts.theta_y;
+    s.max_iter  = opts.max_iter;
+    s.tol       = opts.tol;
+    s.n_init    = opts.n_init;
+    s.rank_ratio_thresh = opts.rank_ratio_thresh;
+    args = namedargs2cell(s);
 end
 
 function mustBeSquareMatrix(M)
