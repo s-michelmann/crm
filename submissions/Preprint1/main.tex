@@ -1,0 +1,411 @@
+\documentclass{article}
+
+% Encoding and fonts
+\usepackage[utf8]{inputenc}
+
+% Ensure proper output encoding for T1 fonts
+\usepackage[T1]{fontenc}
+
+% Load Helvetica (scaled to match default font size)
+\usepackage[scaled]{helvet}
+
+% Make sans serif (Helvetica) the default family
+\renewcommand{\familydefault}{\sfdefault}
+
+% Math and symbols
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[normalem]{ulem}
+
+\usepackage{mathrsfs}
+
+% Algorithms
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+% Graphics
+\usepackage{graphicx}
+\usepackage{xcolor}
+
+% References Citation and bibliography
+\usepackage{nameref}
+\usepackage[superscript,nomove]{cite}
+\usepackage{jabbrv}
+\usepackage[hyphens]{url}
+\usepackage{hyperref}\bibliographystyle{naturemag-doi}
+
+% Page layout
+\usepackage[a4paper, total={6in, 9in}]{geometry}
+
+% Custom commands
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\opti}{\underset{w_x,w_y}{\text{argmax}}}
+\newcommand{\transposed}{\prime} % Sebastian's preferred transpose notation
+
+% Title and author
+\title{Canonical Representational Mapping for Cognitive Neuroscience}
+\author{Manuel Schottdorf \& Sebastian Michelmann\footnote{To whom correspondence should be addressed: s.michelmann@nyu.edu}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+% NOW 150 words exactly
+\begin{minipage}{40em}
+Understanding neural representations is central to cognitive neuroscience, yet isolating meaningful patterns from noisy or correlated data remains challenging. Canonical Representational Mapping (CRM) is a novel multivariate analysis method to identify neural patterns aligned with specific cognitive hypotheses. CRM maximizes correlations between multivariate datasets -- similar to Canonical Correlation Analysis -- while controlling for confounding sources of variance, such as shared noise or irrelevant task conditions. We validate CRM with simulations and apply it across diverse neurophysiological datasets: In one application, we use CRM to map large language model activations onto intracranial electroencephalography recordings during story listening, controlling for contextual autocorrelations. In another example, we factorize overlapping representations in functional Magnetic Resonance Imaging into distinct context and episode components. Finally, we uncover frequency-coupled representations shared between hippocampus and medial prefrontal cortex in navigating rodents. Our results introduce CRM as a powerful tool to isolate representations across modalities and species.
+\end{minipage}
+
+%\tableofcontents
+\newpage
+\section*{Main}
+A central aim of cognitive neuroscience is to characterize the correlation between neural representations and cognitive and behavioral variables. For example, the finding that perceiving places and faces evokes distinct neural activity patterns \cite{haxbyDistributedOverlappingRepresentations2001} can be framed as a correlation between the voxel-wise activation patterns and categorical task variables ("place" vs. "face"). In practice, neural, cognitive, and behavioral variables are often multivariate \cite{normanMindreadingMultivoxelPattern2006, MultivariateBrainbehaviourAssociations}, requiring analytical tools that capture the relationships between two multivariate series of observations; the rise of multivariate analysis methods in neuroscience spurred a wide range of methods for studying representations. These include techniques for mapping brain-behavior associations (e.g., \cite{zadaSharedModelbasedLinguistic2024a, smithPositivenegativeModePopulation2015, dahlDopaminergicNoradrenergicIntegrity2022}), characterizing inter-regional connectivity \cite{youngCouplingMesoscopicBrain2009, fristonFunctionalConnectivityPrincipalComponent1993,koukuntlaUnsupervisedDiscoveryShared2024a}, and aligning neural activity across individuals (e.g., \cite{haxbyCommonHighDimensionalModel2011,niehGeometryAbstractLearned2021a,zhangIntersubjectAlignmentMEG2017}).
+
+A unifying assumption across these methods is that similar representations are characterized by similar patterns of activity. Representational similarity analysis (RSA) formalizes this idea by studying the pairwise similarity structure of multivariate patterns – summarized in a representational dissimilarity matrix (RDM) \cite{kriegeskorteRepresentationalSimilarityAnalysis2008a, palencianoCanonicalTemplateTracking2023}. By contrast, alignment techniques take the complementary approach: transforming multivariate patterns such that the resulting components are maximally aligned -- by components we mean the synthetic variate that is derived as a linear combination of features. For instance, multi-subject fMRI data can be succinctly described by a reduced number of orthogonal components in a shared response model \cite{chenReduceddimensionFMRIShared2015a}. One widely used method for multivariate alignment is Canonical Correlation Analysis (CCA) \cite{zhuangTechnicalReviewCanonical2020, hotellingRELATIONSTWOSETS1936}. CCA identifies linear transformations for each of two multivariate datasets such that the resulting canonical variates (components) are maximally correlated.
+
+Importantly, not all correlations between multivariate measurements reflect meaningful representational overlap. Alignment methods that maximize correlations can inadvertently capture trivial or artifactual activity such as electrical noise or scanner drift. Moreover, neural representations often co-occur with other representational patterns that are not of primary interest. One recent example of this problem is that the neural representations of individual words in a narrative are inherently entangled with the broader contextual structure of the story. When aligning word-embeddings derived from Large Language Models (LLMs) with neural activation, the resulting shared representations may consequently capture those unwanted aspects \cite{goldsteinAlignmentBrainEmbeddings2024,schonmannStimulusDependenciesRather2025}. Furthermore, neural representations that are computationally important may only explain a small amount of variance in neural measurements \cite{lampinenRepresentationBiasesWill2025}, requiring transformations of the data that isolate representations of interest from overlapping representational patterns. In one recent functional Magnetic Resonance Imaging (fMRI) study \cite{reaghFlexibleReuseCorticohippocampal2023a}, overlapping representations were observed during repeated viewing of naturalistic movies. In those movies two protagonists visited two contexts from two different schemata (caf\'es and supermarkets). Patterns of neural activity in medial PFC showed stronger evidence for schematic than for contextual or episodic representations; nonetheless, contextual representations in mPFC may exist, and researchers may wish to isolate and study them. These challenges motivate the need for a method that can factorize multivariate patterns into separate representations, effectively maximizing a similarity structure that is derived from a cognitive hypothesis (Figure \ref{fig:MainFig1}), while controlling for similarity from sources of variance not of interest.
+
+We propose a new method that solves this problem as a constrained alignment problem: Canonical Representational Mapping (CRM) maximizes the correlation between two multivariate series of observations ($C_{xy}$), while controlling for correlations that are not of interest. This is accomplished by constraining the covariance with a matched control time series ($D_{xy}$) to zero. We first outline the theory behind this method and then test its effectiveness through simulations and multiple applications to neurophysiological data. In one analysis, we map activations of a large language model (i.e., word-embeddings) onto intracranial Electroencephalography (iEEG) recordings (akin to Goldstein et al. \cite{goldsteinAlignmentBrainEmbeddings2024}). Using CRM we control for contextual information by fixing the correlation with a lag-shifted time-series of embeddings (i.e., correlation with the previous word's embedding) to zero. This analysis confirms the presence of word-representations prior to word onset while ruling out alternative explanations based on stimulus-stimulus or contextual correlations. In another analysis, we factorize the fMRI signal from Reagh et al. \cite{reaghFlexibleReuseCorticohippocampal2023a} into components that capture separate aspects of overlapping situations (e.g., context and episode patterns).
+%
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=1\textwidth]{figures/figure1.png}
+    \caption{\textbf{Motivation for Canonical Representational Mapping.} Shown is a conceptual overview of CRM: When researchers collect two  observations with repeated measures (e.g., any pair of continuous multi-channel recordings from different brain regions in human or animal recordings, different subjects, vector embeddings in neural network models, or multivariate behavioral data, etc.) they can ask if the same information is represented in both time series. Three example multivariate series of observations are illustrated (red labels). If the relationship between pattern 1 and pattern 2 is of interest, the pairwise linear relationships can be captured in the cross-covariance matrix between the multivariate time series ($C_{xy}$, orange). Canonical correlation analysis (CCA) can transform them, so that resulting components are maximally correlated. However, shared information can stem from confounding variables and common noise sources. A third series of observations (pattern 3) may share the confounding signal of no interest and can be used to estimate the pairwise linear relationships of confounding signal between the variates ($D_{xy}$, yellow). Canonical Representational Mapping leverages this control-covariance to separate neural representations from noise and disentangle overlapping representational patterns. I.e., akin to CCA, CRM maximizes the correlation between two multivariate time series; however, it constrains the covariance with a matched control time series ($D_{xy}$) to zero. Examples of control time series are lag-shifted data (e.g., a time-series of word-embeddings of the previous word, which shares the same context but not the same content), data filtered in a noise band (e.g., data that has been band-pass filtered around the line-noise), or pseudo-randomized data, where the correspondence of interest is shuffled but the correspondence of confounds is kept (e.g., trials are shuffled within a block to separate item representations from block-specific effects). }
+    \label{fig:MainFig1}
+\end{figure}
+%
+In a last example, we demonstrate the usefulness of CRM for detecting spectral features in the LFP recordings in freely behaving rodents solving a complex maze. We identify shared representations between hippocampus and medial prefrontal cortex \cite{stoutUsingSynchronizedBrain2024} and demonstrate that maximizing correlations via CCA latches on to shared noise in the recording: The resulting CCA components predominantly reflect the correlation of PSD at 60~Hz; with CRM, we control the covariance in the band-pass-filtered data and detect coupling in the theta and beta frequency bands in a data-driven way.
+
+Our results show that CRM can be a powerful tool for cognitive neuroscience to isolate meaningful neural representations across modalities and species. We end by discussing the limitations of CRM, and propose potential future extensions.
+
+%\section*{Results}
+
+\subsection*{Methodological validation and simulation}
+
+While full mathematical details are described in the \nameref{sec:Methods} section, we wish to develop an intuition for how CRM works. Readers primarily interested in neurophysiological applications may skip ahead to the following sections. In brief, CRM maximizes the correlation $\text{corr}(w_xX,w_yY)$ over the weight vectors $w_x\in\R^{p}$ and $w_y\in\R^{q}$, given the data $X\in\R^{p\times n}$ and $Y\in\R^{q\times n}$ where $p,q$ is the number of variates, and $n$ is the number of observations. These data typically take the form of variates over observations, for example BOLD or EEG signals measured over time (or trials) across many voxels or electrodes. CRM maximizes this correlation under the constraint that applying the same weights to datasets $S\in\R^{p\times n}$ and $T\in\R^{q\times n}$ yields $\text{corr}(w_xS,w_yT)\approx 0$. For example, $S$ and $T$ could be EEG signals during inter-trial intervals, while $X$ and $Y$ are taken during trials (Fig.~\ref{fig:MainFig1}). Alternatively, the same data can be reorganized so that $S$ and $T$ lose only the key association of interest (e.g., trial correspondence) while retaining associations not of interest (e.g., block correspondence). This formulation can be restated as a quadratic optimization problem on the covariance matrices $C_{xy}=\text{cov}(X,Y)$ and $D_{xy}=\text{cov}(S,T)$, aiming to maximize $w_xC_{xy}w_y$ while enforcing $w_xD_{xy}w_y=0$ with a
+Lagrange multiplier. This constrained quadratic problem yields many solutions for $w_x$ and $w_y$, computable in polynomial time via eigendecomposition (see \nameref{sec:Methods}).
+
+To develop an intuition for CRM solutions, specifically in comparison to CCA, we performed a set of analyses on simulated data. In these simulations, we controlled the correlation level by generating  $X\in\R^{p\times n}$ from normally distributed random numbers with unit variance, and deriving $Y=M\times X + \alpha\,\eta $ where $M\in\R^{q\times p}\sim\mathcal{N}(\mu=0,\sigma=1)$ is a fixed matrix with random entries drawn from a normal distribution with unit variance. The contribution of normally distributed noise $\eta\in\R^{q\times n}$ was set with a noise parameter $\alpha$. This procedure yielded the correlated datasets $X$ and $Y$. We additionally simulated two further random datasets $S\in\R^{q\times n}\sim\mathcal{N}(\mu=0,\sigma=1)$ and $T=(\beta N + (1-\beta)M) \times S$ where $N\in\R^{q\times p}\sim\mathcal{N}(\mu=0,\sigma=1)$ is a random matrix, and $M$ is the same as above. The partial alignment of $X,Y$ and $S,T$ via the shared matrix $M$ makes the CRM problem challenging. The parameter $\beta$ tunes this alignment, and was set ad-hoc to $\beta=1/4$.
+
+In the absence of noise, $\alpha=0$, the optimal CCA weights satisfy $w_xMw_y=1$ and $w_xC_{xy}w_y=1$. Computing $w_xD_{xy}w_y$ in this setting yields some finite value, as CCA does not account for the constraint. CRM, in contrast, enforces $w_xD_{xy}w_y\approx0$ across all noise levels (Fig.~\ref{fig:MainFig2}a,b). Of note, we display the results with the strongest correlation $w_xC_{xy}w_y$ because multiple solutions exist for both methods; for CCA, their number is determined by the number of existing eigenpairs. We next sought to illustrate the various solutions of CRM. In CRM, valid solutions are roots of the eigenvalues of a matrix as function of a tuning parameter $\lambda_3$ (see \nameref{sec:Methods}). Plotting the eigenvalues of our simulated problem for one example noise level as function of this tuning parameter reveals numerous zero crossings (red dots in Fig.~\ref{fig:MainFig2}c) where the constraint is satisfied. Each zero crossing corresponds to a CRM solution, generally with a different correlation value $w_xC_{xy}w_y$. To illustrate this, we color-coded the curves according to their correlation values. Note that the different curves all flatten out towards larger values of $\lambda_3$; as shown in the Methods section, no solutions exist for large $\lambda_3$. Consequently an exhaustive search can find all CRM solutions, and the best solution can be identified based on its largest eigenvector. Example implementations of both methods are provided as Matlab and Python code in our repository (see: \nameref{sec:Code availability}).
+
+We next simulated a neuroscience-motivated use-case (Fig.~\ref{fig:MainFig2}d-f). We generated multiple observations of a set of variates containing a representation of interest (a square function) that was obscured by other signals, here modeled as a high-amplitude sinusoid. The square signal is linearly added to every 10th variate; thus the representation of interest was present only in variates 0, 10, 20, and so on. In addition to this shared representation masked by the shared sinusoidal noise signal, two simulated datasets $X$ and $Y$ (Fig.~\ref{fig:MainFig2}d) also contained uncorrelated noise unique to each variate and observation. From these two unfiltered datasets, we computed the covariance $C_{xy}$. To extract the slow representation of interest, we band-pass filtered the data in the time domain, isolating the noise frequency. From this noise-band-filtered data we computed the constraining covariance $D_{xy}$, which was then used to constrain the alignment of the original unfiltered data (see \nameref{sec:Methods}).
+%
+\newpage%
+
+\begin{figure}[th!]
+    \centering
+    \hspace*{-1.5cm} \includegraphics[width=1.2\textwidth]{figures/figure2}
+    \caption{\textbf{Proof of principle of CRM on simulated data.}
+    \textbf{a} Best correlations produced by CRM (blue) and CCA (green) for two random matrices $X$ and $Y$, where $X$ is populated by normally distributed random numbers, and $Y=M\times X + \alpha\,\eta$ is a rotated version of $X$, corrupted by noise of magnitude $\alpha$. Values are means over $N=10$ repeats, error bars indicate S.E.M. \textbf{b} Projection $w_xD_{xy}w_y$ of CCA and CRM weight vectors $w_x$ and $w_y$ onto the constraining matrix $D_{xy}$ for various noise levels $\alpha$ for the data in (a). The vectors produced by CCA produce finite values, whereas CRM enforces $w_xD_{xy}w_y \approx 0$. \textbf{c} $w_xD_{xy}w_y$ as a function of $\lambda_3$ for an example dataset. Curves are color‑coded by the corresponding correlation $w_xC_{xy}w_y$; red dots mark points where the constraint is met. Note how curves flatten out towards large $\lambda_3$; all solutions lie in the center of the plot. \textbf{d} Simulated dataset containing a representation of interest (square wave) embedded in a subset of variates, masked by a shared sinusoid. \textbf{e} Top: CCA weights (blue/orange) for the data in (d, top/bottom), showing roughly uniform weighting across channels. Bottom:  CCA-components compared to the signal of interest (black dashed). The CCA components (orange/blue) are dominated by the sinusoidal noise. \textbf{f} Top: Same as e, but with weights computed with CRM. Note how most weights scatter around 0, with large weights restricted to variates containing the target representation. Bottom: components computed with CRM; components closely match the target signal (black dashed), indicating successful isolation of the representation of interest.}
+    \label{fig:MainFig2}
+\end{figure}
+
+\newpage%
+As expected, CCA alignment produced canonical coefficients  (Fig.~\ref{fig:MainFig2}e top) dominated by the sinusoidal signal, which was unrelated to the representation of interest (Fig.~\ref{fig:MainFig2}e bottom). In contrast, CRM assigned large weights only to variates containing the representation of interest (Fig.~\ref{fig:MainFig2}f top). The resulting CRM components closely matched the target signal (see Fig.~\ref{fig:MainFig2}f bottom), indicating successful isolation of the representation of interest.
+%
+%
+%
+\subsection*{Context-free alignment of neural representations and vector embeddings\label{sec:iEEGalignment}}
+Several recent studies have shown that the vector representation generated by large language models (LLMs) — i.e., word embeddings — resemble the information represented in human neural activity \cite{goldsteinAlignmentBrainEmbeddings2024, goldsteinSharedComputationalPrinciples2022, zadaSharedModelbasedLinguistic2024a}. For example, Goldstein et al. \cite{goldsteinSharedComputationalPrinciples2022} fit regression models mapping word-embeddings onto high-frequency activity in human iEEG during naturalistic story listening. In their study, cross-validated encoding models predicted neural activity from word embeddings, indicating that LLMs and humans represent word information in similar ways. A key finding was the presence of word representations in neural activity prior to the onset of the word, which the authors interpreted as the representation of upcoming words via neural mechanisms of prediction in natural language. A recent study, however, criticizes these findings and suggests that stimulus dependencies rather than prediction explain the fit of encoding-models prior to word-onset \cite{schonmannStimulusDependenciesRather2025}; that is, correlations between the current word representation and the previous word representation may give rise to spurious pre-stimulus alignment. This is an exemplary case of why controlling confounding correlations is essential when aligning representations between systems.
+
+Indeed, correlations between multivariate patterns in word embeddings and human neural activity can arise from both context and content representations, since both are captured by the embeddings and the neural data. To control for this confound, we reasoned that -- if the context-representation of the current word is also captured by the previous word -- we could remove its influence by restricting the alignment with the previous word embedding. Accordingly, we computed the channel-by-embedding cross-covariance matrix $C_{xy}$ across words in the story to maximize correlations between neural activity and the top 50 principal components of the embeddings (see \nameref{sec:Methods}). For CRM, we additionally computed $D_{xy}$ — the cross‑covariance between neural activity and the embedding of the previous word (Fig.~\ref{fig:MainFig3}a) — and enforced $w_x D_{xy} w_y = 0$ during alignment. We repeated this analysis at lags from -4 s to +4 s around word onset. For comparison, CCA was computed by setting $D_{xy}$ to zero. The correlation of the first CCA and CRM components on held‑out data is shown in Fig.~\ref{fig:MainFig3}b. Both methods achieved high correlations ($>.3$) on the test set, increasing prior to word onset. Crucially, only correlations between the CRM components decayed fully to zero within the 4 seconds before word onset. Specifically, 1.5 seconds before word onset the maximization of correlations in the training set no longer generalized to the test set when the correlation with the previous‑word embedding was constrained to zero. This suggests that pre-stimulus correlations of the CRM component can be interpreted as prediction of the upcoming word (content prediction), whereas the CCA component may capture correlations with context-representations that are shared across adjacent words. Component loadings on channels (Fig. \ref{fig:MainFig3}c) suggest a broadly similar distribution of the neural representation for CCA (Fig. \ref{fig:MainFig3}c), top) and CRM (Fig. \ref{fig:MainFig3}c), middle) , with higher loadings for CCA in early auditory processing regions and higher loadings for CRM in higher-order auditory processing regions (e.g., posterior STS and right IFG, Fig. \ref{fig:MainFig3}c), bottom). This is consistent with the interpretation that stimulus-driven correlations in early auditory areas can influence the CCA results.
+
+Of note, the linearity of CRM is advantageous in analyses of these types, because a sufficiently powerful non-linear method can learn to predict the next word based on the statistics of natural languages. In other words, the increase of correlations before word onset in Fig. \ref{fig:MainFig3}b is not due to CRM learning to predict the word from neural activity, but rather to the fact that upcoming content can be linearly decoded from neural activity. A more complex scheme would make this analysis harder to interpret (see also \nameref{sec:Discussion}).
+%
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/figure3.png}
+    \caption{\textbf{Alignment between vector embeddings and intracranial EEG recordings in humans.} \textbf{a} Vector embeddings from \texttt{Whisper} \cite{radfordRobustSpeechRecognition2022} are mapped onto high-frequency activity in iEEG during naturalistic story listening\cite{zadaPodcastECoGDataset2025a}. Both CRM and CCA derive component pairs that maximize the cross-covariance between vector embeddings and neural activity $w_xC_{xy}w_y$. Only CRM additionally constrains the cross-covariance between neural activity and the vector embedding of the previous words to zero ($w_xD_{xy}w_y = 0$). \textbf{b} Mean Pearson correlation $\pm$ SEM (across 9 patients) in held-out data for CCA (purple) and CRM (orange), averaged across 10 folds. Correlations were computed at lags relative to word onset. CCA yields positive correlations up to 4 s before onset, potentially reflecting prediction of upcoming words and/or shared contextual information between embeddings within the same story. CRM yields positive correlations from $\sim$1 s before up to $\sim$ 2 s after onset, indicating that word-specific representations are present in neural activity during this window. Only the CRM-derived correlations can be interpreted as predictions of word-level representations. \textbf{c} Component loadings on iEEG channels for CCA (top), CRM (middle), and their difference (bottom). Warm colors in the difference map indicate stronger contribution to CCA; blue indicates stronger contribution to CRM. Only channels where the absolute difference exceeded 0.05 are plotted.}
+    \label{fig:MainFig3}
+\end{figure}
+%
+%
+%
+\newpage
+%
+\subsection*{Factorizing overlapping representations into their constituent parts}
+%
+A plethora of studies has investigated how information is represented in different brain regions \cite{kriegeskorteRepresentationalSimilarityAnalysis2008a}. One recent fMRI study systematically manipulated stimulus material to probe neural representations of nested properties of naturalistic experience \cite{reaghFlexibleReuseCorticohippocampal2023a}. In 24 different videos, two characters (Tommy and Lisa) visited four locations belonging to two schemata (caf\'e and grocery store). Among other findings, the authors observed that medial prefrontal cortex (mPFC) held schematic representations: pairwise correlations between individual trials were most consistent with a model in which videos from the same schema elicited similar neural response patterns (Figure \ref{fig:MainFig4}a). Other models -- based on shared context (e.g., patterns of Tommy in cafe 1 correlating with Lisa in cafe 1), or shared episode (e.g., pattern correlation between three videos of Tommy visiting caf\'e 1)-- fit the data to a lesser extent. This motivates the possibility that overlapping representations in mPFC can be factorized into constituent parts, potentially isolating contextual and episodic representations that are masked by dominant schematic representations.
+
+We first reproduced the original finding by computing a Representational Similarity Matrix (RSM) as the pairwise correlation between beta weights from all videos (Figure \ref{fig:MainFig4}a, left). Correlating the RSM with a schematic model matrix (where in-schema correlations are 1 and other correlations are 0) yielded the highest average correlation across 20 subjects ($r = 0.177, \text{SD} = 0.185$). This correlation was significantly higher than the correlation with the contextual model matrix ($r = 0.135, \text{SD} = 0.1137, p < 0.04$) and the correlation with the episodic model matrix ($r = 0.027, \text{SD} = 0.064, p < 0.001$). The correlation with the contextual model matrix was also significantly higher than the correlation with the episodic model matrix ($p < 0.001$, Figure \ref{fig:MainFig4}a, right).
+
+We then transformed voxel-wise covariance into component representations aligned with contextual and episodic models. To do this we computed the pairwise linear relationships between voxels across different trial-correspondences: To capture schema-level structure, we computed the covariance matrix $L_{xy}$ from trial pairs that shared a same schema but differed in context (e.g., grocery store 1 and grocery store 2 pairs).  We further computed the covariance matrix $M_{xy}$ from trial-pairings within the same context (e.g., videos of Tommy and Lisa visiting cafe 1). Finally we computed the covariance matrix $N_{xy}$ from trial-pairings within the same situation (e.g., the three videos of Tommy visiting grocery store 1).  Using the fast solver (Algorithm \ref{alg:simplified_solver}) we derived 20 components that maximized correlations in the same context $M_{xy}$ while the correlations between trials that formed part of the same schema but not the same context ($L_{xy}$) to zero. We then re-computed the RSM across these 20 components, i.e., we compared the pattern-correlation across components for each pair of trials (Figure \ref{fig:MainFig4}b, left) and arranged them in the same matrix-format as for the RSM of the raw data. We then correlated this RSM with the schematic, contextual, and episodic model matrices. Confirming the successful transformation of the feature-data, the correlation with the context model was highest for the context-components ($r= 0.618, \text{SD} = 0.0645$); correlations with the schema-model ($r= 0.288, \text{SD} = 0.059$) and the episode-model ($r= 0.37, \text{SD} = 0.044$) were substantially lower (Figure \ref{fig:MainFig4}b, right).
+
+Finally, we derived 20 episodic components by maximizing the correlations in $N_{xy}$ while constraining correlations in $M_{xy}$ to zero. We re-computed the RSM across these 20 components (Figure \ref{fig:MainFig4}c, left) and correlated it with the schematic, contextual, and episodic model matrix. For these episode components, the correlation with the episode model was now highest ($r= 0.714, \text{SD} = 0.043$), followed by correlations with the context-model ($r= 0.404, \text{SD} = 0.036$) and the schema-model ($r= 0.197, \text{SD} = 0.047$, Figure \ref{fig:MainFig4}c, right). Together, these results demonstrate that overlapping representations can be factorized into their constituent parts using CRM.
+
+\newpage
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figures/figure4.png}
+    \caption{\textbf{Representational Similarity Analysis (RSA) with CRM.} CRM can factorize overlapping neural representations into their constituent parts. \textbf{a} RSM of fMRI BOLD patterns in medial prefrontal cortex (mPFC; data from Reagh and Ranganath, 2023 \cite{reaghFlexibleReuseCorticohippocampal2023a}).  Participants viewed three videos of four contexts visited by two individuals. Contexts belonged to two schemata (caf\'e and grocery store). Multivariate BOLD responses correlate between the trials; correlation of the RSM with a schematic model matrix was significantly higher than with context or episode models suggesting that mPFC predominantly holds schematic representations. \textbf{b} Correlation across 20 CRM "context" components: CRM was fitted to maximize the cross-covariance between patterns of the same context (here: $M_{xy}$) while keeping the cross-covariance between patterns of different context in the same schema ($L_{xy}$) at zero. Correlations between the RSM and a context model-matrix are strongest. \textbf{c} Correlation across 20 CRM "episode" components: CRM was fitted to maximize the cross-covariance between patterns of the same situation (same person in the same context; $N_{xy}$) while keeping the cross-covariance between patterns of different situations (different person in the same context; $M_{xy}$) at 0. Correlations between the RSM and an episode model-matrix are strongest.}
+    \label{fig:MainFig4}
+\end{figure}
+
+\subsection*{Unsupervised discovery of coupled spectral features in LFP recordings}
+
+In electrophysiological recordings, shared noise is common, often arising from 50~Hz or 60~Hz line interference. This can make the unsupervised search for relationships across wide spectral bands challenging. To demonstrate this, we analyzed previously published data from medial prefrontal cortex (mPFC) and Hippocampus (HPC) of awake, behaving rats engaged in a complex spatial navigation task \cite{rosenblumChoiceBehaviorsPrefrontal2025a}. Spectrograms from the electrode time series revealed strong correlated noise within a narrow frequency band (Fig.~\ref{fig:MainFig5}a,b).
+%
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=\textwidth]{figures/figure5}
+    \caption{\textbf{Unsupervised discovery of spectral features in LFP recordings in the presence of noise in rodents navigating a maze.} \textbf{a,b} Spectrograms of LFPs recorded in the mPFC and HPC of awake and behaving rats solving a spatial navigation task \cite{rosenblumChoiceBehaviorsPrefrontal2025a}. \textbf{c} Weights computed with CRM for the data shown in a/b in (blue/orange). Insets show the same weights computed with CCA. Note that the CCA weights peak at a shared noise frequency around 60~Hz. \textbf{d} CRM-components from the data in a (blue) and b (orange) as a function of time. The inset shows the spectral loadings from a/b, indicating the largest amplitude-amplitude coupling in the theta band with minor beta contributions. \textbf{e} HPC CRM component from d as a function of position in the maze. Warmer colors appear away from the home box of the animal (black arrow); the home box is located at $ \text{X position} = 600\text{ cm}$ and $\text{Y position} = 250\text{ cm}$. \textbf{f} Same as e, but components computed with CCA. No relationship with the maze-position is apparent, consistent with CCA components being dominated by 60~Hz noise.}
+    \label{fig:MainFig5}
+\end{figure}
+%
+%
+This dataset was recorded in the United States, where the line frequency is centered at 60~Hz. Applying CCA to survey the spectra for correlated fluctuations across frequencies, produced large weights around the 60~Hz band. To maximize correlations while controlling for this noise, we filtered the data with a band-pass filter around 60~Hz to obtain matrices $S$ and $T$, and applied CRM to keep the correlation in this noise-band at zero. This procedure removed the strong line-noise bias, and revealed significant correlations in the theta band with minor beta contributions (Fig.~\ref{fig:MainFig5}c). The CRM components over time produce a time series dominated by fluctuations on the time scale of seconds; the same time scale as the animal navigating in the maze. This suggests that the slowly evolving cross-area correlations in the theta and beta bands are related to behavior (Fig.~\ref{fig:MainFig5}d).
+
+Plotting the CRM components against the animal's physical position in the maze revealed an interpretable pattern: the CRM components (approximately a weighted difference between log-theta and log-beta power) were small in the home box and increased away from the home box and towards the choice point and in the reward sections of the maze. This pattern was similar in mPFC and HPC. Warmer colors away from the home position in Fig.~\ref{fig:MainFig5}e illustrate this effect. We quantified this relationship with the Pearson correlation coefficient between distance from the home box and the CRM component ($r=0.1$); compared to random permutations, this was highly significant ($p=0.002$). By contrast, the CCA component had no relationship with distance to the home box ($r=-0.04$; $p=0.2$); plotting the CCA components as a function of the physical position of the rat in the maze did not reveal any relationship (Fig.~\ref{fig:MainFig5}f), consistent with the fact that CCA‑based coupling was dominated by 60~Hz line noise. The examples shown in Fig.~\ref{fig:MainFig5} display the HPC CRM component. The mPFC CRM component (not shown) was statistically indistinguishable. Although in practice, electrophysiologists often target frequency bands based on a priori hypotheses\cite{rosenblumChoiceBehaviorsPrefrontal2025a}, this result demonstrates how coordinated amplitude-amplitude fluctuations across brain areas can be identified in an unsupervised search.
+
+%
+\section*{Discussion}\label{sec:Discussion}
+%
+Patterns of neural activity that align with cognitive constructs and behaviors serve as key explanatory variables at the physiological level in cognitive neuroscience. Indeed, task related neural activity can be productively described within a framework in which operations or computations transform between representations \cite{pohlClarifyingConceptualDimensions2025, fodorRepresentationsPhilosophicalEssays1981, marr_vision_1982}. Here we introduced a new multivariate method to isolate representations that align with specific cognitive hypotheses. Canonical Representational Mapping (CRM) maximizes the correlation between two multivariate series of observations while constraining the correlation with matched control data to zero. Conceptually, CRM can be understood as a multivariate extension of a partial correlation: While CCA implements a multivariate extension of correlation that does not control for confounding variables \cite{tuzhilinaCanonicalCorrelationAnalysis2023}, CRM controls correlations specified in the covariance $D_{xy}$.
+
+We demonstrated that this method can solve various challenges in cognitive neuroscience data analysis. In one application, we separated neural representations predicting upcoming words in a story from those reflecting shared context \cite{goldsteinAlignmentBrainEmbeddings2024, goldsteinSharedComputationalPrinciples2022, schonmannStimulusDependenciesRather2025}. Several recent papers have aligned LLM-derived representations with human iEEG recordings, identifying neural signatures of next-word prediction. However, disentangling prediction from shared context has remained challenging. One recent paper suggests that rather than reflecting signatures of next-word prediction, shared representations between LMMs and iEEG prior to word onset can be succinctly explained by stimulus-dependencies \cite{schonmannStimulusDependenciesRather2025}. By controlling for shared context representations with CRM, we showed that this is not the case and that neural patterns uniquely characterizing the upcoming word are indeed represented before word onset.
+
+Another challenge that CRM addresses is isolating neural representations that correspond to a specific cognitive construct. In fMRI bold signal from human mPFC \cite{reaghFlexibleReuseCorticohippocampal2023a} we demonstrated that -- despite schematic structure dominating representational similarity -- contextual and episodic representations can be found via linear transformation of the multivariate response patterns. This type of transformaion via CRM allows for the targeted investigation of pre-specified neural representations: CRM can factorize overlapping representations into their constituent parts, isolating neural activity patterns that uniquely reflect one construct of interest.
+
+Finally, similar information may also be represented in different brain regions. However, transformations aligning series of observations between regions are notoriously impacted by shared noise; multivariate alignment may easily pick up on this noise. Estimating this shared noise -- for instance by band-pass filtering the data around 50 or 60~Hz -- makes it possible to constrain the alignment with CRM such that correlations between noise are not part of the aligned signal.
+
+It is noteworthy that we only discussed CRM with the constraint of $w_x D_{xy} w_y = 0$, effectively controlling for correlations that are not of interest. However, the constraint can easily be defined more generally based on known correlations. I.e., controlling correlations at a predefined target value $r$ yields the constraint $w_x D_{xy} w_y = r$ for any $r\neq0$.
+
+CRM can natively leverage techniques developed to improve CCA performance. For instance, "sparse CCA" imposes constraints on the weights of CCA directly, regularizing $w_x$ or $w_y$ with an $\ell^1$ norm. Several examples of this and other linear constraints can be found in the literature\cite{zhuangFamilyLocallyConstrained2017,wittenPenalizedMatrixDecomposition2009,parkhomenkoSparseCanonicalCorrelation2009,tuzhilina_canonical_2023}. Covariance matrix regularization can also be combined with CRM. When dealing with large numbers of variables, the within-set covariance matrices ($C_{xx}$ and $C_{yy}$) are also large and can be of the same order of magnitude as the number of observations. If the number is smaller than the number of features, the covariance matrices cannot be estimated reliably from the sample. In these cases, the covariance matrices $C_{xx}$ and $C_{yy}$ are usually replaced by identity matrices, and sparse CCA becomes equivalent to sparse Partial least squares\cite{mihalikCanonicalCorrelationAnalysis2022}. In this regime regularization of the covariance matrices can also prevent overfitting \cite{ledoitHoneyShrunkSample2003a}. In regularized CCA, identity matrices are added to covariance matrices to improve robustness in low-sample regimes \cite{tuzhilina_canonical_2023}. Similarly, it may be desirable to add regularization to the covariance matrices $C_{xx}$ and $C_{yy}$ used in CRM to prevent overfitting.
+
+
+Several extensions of CRM are possible and remain to be explored. Although CRM solves a quadratic constraint, the resulting transformations of the data are linear. Linear transformation offer advantages in data efficiency and interpretability (see Ivanova et al. \cite{ivanova_beyond_2022} for an in-detail discussion of this topic). It is also noteworthy that a similar conceptual idea of bringing exemplars closer to positive exemplars of the same class than to a negative example of a different class by at least a certain margin is captured in the learning objective defined by triplet loss \cite{schroffFaceNetUnifiedEmbedding2015}. In other words, deep neural network models with a triplet loss learning objective can find non-linear mappings that capture a related idea to the concept of CRM. To extend CRM to non-linear alignment problems, a nonlinear extension can be formulated by applying a "Kernel Trick" on the features \cite{akahoKernelMethodCanonical2007}, projecting them into a high-dimensional space before applying CRM. Similarity, a deep version akin to deep CCA (dCCA) and related methods \cite{Galen2013,koukuntlaUnsupervisedDiscoveryShared2024a} could nonlinearly extend CRM. Furthermore, in its current formulation, CRM can only factorize datasets of the form $\text{variants}\times\text{observations}$. However, many datasets across neuroscience have important higher order structure, e.g. BOLD signals over trials \textit{and} time, or firing rates over trials \textit{and} cell type \cite{schottdorfQuantitativeDescriptionMacaque2021}. It can be important for researchers to factorize neural responses of these higher order data. CCA has previously been generalized to directly maximize the canonical correlation of multiple (more than two) views with a technique known as tensor CCA (TCCA) \cite{luoTensorCanonicalCorrelation2015}. Following the process developed for regularized versions of TCCA (e.g., sparse TCCA) \cite{zhuRiemannianOptimizationSparse2025}, an analog extension could be developed with CRM (e.g., by building our new constraint directly into the TCCA cost function). Future work can demonstrate the effectiveness and potential uses for these non-linear and tensor extensions to CRM.
+
+Our findings and simulations demonstrate CRM to be a flexible, and extensible method with broad potential to advance cognitive neuroscience by bridging between neural recordings and cognition. It is a novel tool designed specifically to study neural representations within and across information processing systems. While introduced with applications in cognitive neuroscience in mind, we note that CRM can have broader applications, akin to CCA, which has found wide use across economy, ecology, and genomics \cite{wittenExtensionsSparseCanonical2009,parkhomenkoSparseCanonicalCorrelation2009, mazuruseCanonicalCorrelationAnalysis2014,vinodCanonicalRidgeEconometrics1976} -- CRM may prove valuable beyond neuroscience.
+
+\section*{Methods}\label{sec:Methods}
+
+\subsection*{The CRM optimization problem and numerical solution}
+
+CRM aims to maximize the correlation between two multivariate datasets within a constrained subspace. Formally, the optimization problem is defined as follows:\\
+
+Given two sets of observations, $X \in \mathbb{R}^{p \times n}$ and $Y \in \mathbb{R}^{q \times n}$, we seek weight vectors $w_x \in \mathbb{R}^p$ and $w_y \in \mathbb{R}^q$ that maximize the correlation $\text{corr}(w_x^\top X, w_y^\top Y)$, subject to the constraint that $\text{corr}(w_x^\top S, w_y^\top T) = 0$ between the sets of observations, $S \in \mathbb{R}^{p \times n}$ and $T \in \mathbb{R}^{q \times n}$. \\
+
+
+The optimization objective can be written as:
+\begin{align*}
+\max_{w_x, w_y} \quad & \text{corr}(w_x^\top X, w_y^\top Y) \\
+= \quad & \frac{\mathbb{E}[w_x^\top X \cdot (w_y^\top Y)]}{\sqrt{\mathbb{E}[(w_x^\top X)^2]} \sqrt{\mathbb{E}[(w_y^\top Y)^2]}} \\
+= \quad & \frac{w_x^\top \mathbb{E}[XY^\top] w_y}{\sqrt{w_x^\top \mathbb{E}[XX^\top] w_x} \sqrt{w_y^\top \mathbb{E}[YY^\top] w_y}} \\
+:= \quad & \frac{w_x^\top C_{xy} w_y}{\sqrt{w_x^\top C_{xx} w_x} \sqrt{w_y^\top C_{yy} w_y}},
+\end{align*}
+where $C_{xx}$, $C_{yy}$, and $C_{xy}$ denote the covariance matrices of $X$, $Y$, and their cross-covariance, respectively. The expectation $\mathbb{E}[\cdot]$ is taken over the $n$ samples.
+\\
+
+We can fix the denominators by imposing the normalization constraints:
+\[
+w_x^\top C_{xx} w_x = 1, \quad w_y^\top C_{yy} w_y = 1.
+\]
+Additionally, we enforce the decorrelation constraint:
+\[
+\text{corr}(w_x^\top S, w_y^\top T) = 0 \quad \Rightarrow \quad w_x^\top D_{xy} w_y = 0,
+\]
+where $D_{xy} := \mathbb{E}[ST^\top]$ is the cross-covariance of $S$ and $T$.
+\\
+
+The final constrained optimization problem becomes:
+\begin{align}
+\max_{w_x, w_y}\, w_x^\top C_{xy} w_y \label{optimize} \quad
+\text{subject to} \quad w_x^\top C_{xx} w_x = 1, \quad w_y^\top C_{yy} w_y = 1, \quad w_x^\top D_{xy} w_y = 0. \nonumber
+\end{align}
+
+\subsubsection*{Lagrangian Formulation}
+
+This is a non-convex quadratic problem, which is generally NP-hard. However, the structure of our problem allows for partial tractability. We introduce Lagrange multipliers $\lambda_1$, $\lambda_2$, and $\lambda_3$ and define the Lagrangian:
+\[
+\mathcal{L} = w_x^\top C_{xy} w_y + \lambda_1(w_x^\top C_{xx} w_x - 1) + \lambda_2(w_y^\top C_{yy} w_y - 1) + \lambda_3 w_x^\top D_{xy} w_y.
+\]
+
+Taking derivatives and setting them to zero yields:
+\begin{align}
+\frac{\partial \mathcal{L}}{\partial w_x} &= C_{xy} w_y + 2\lambda_1 C_{xx} w_x + \lambda_3 D_{xy} w_y = 0 \label{eq:Lwx} \\
+\frac{\partial \mathcal{L}}{\partial w_y} &= C_{xy}^\top w_x + 2\lambda_2 C_{yy} w_y + \lambda_3 D_{xy}^\top w_x = 0 \label{eq:Lwy}
+\end{align}
+
+Multiplying Eq.~\eqref{eq:Lwx} by $w_x^\top$ and Eq.~\eqref{eq:Lwy} by $w_y^\top$, and subtracting, we find:
+\[
+2(\lambda_1 - \lambda_2) = 0 \quad \Rightarrow \quad \lambda_1 = \lambda_2 := \lambda/2.
+\]
+
+Substituting back, we obtain:
+\begin{align}
+w_x &= -\frac{1}{\lambda} C_{xx}^{-1}(C_{xy} + \lambda_3 D_{xy}) w_y \\
+w_y &= -\frac{1}{\lambda} C_{yy}^{-1}(C_{xy} + \lambda_3 D_{xy})^\top w_x \label{gety}
+\end{align}
+
+Combining these yields a generalized eigenvalue problem:
+\begin{equation}
+C_{xx}^{-1}(C_{xy} + \lambda_3 D_{xy}) C_{yy}^{-1}(C_{xy} + \lambda_3 D_{xy})^\top w_x = \lambda^2 w_x \label{eq1}
+\end{equation}
+with the constraint:
+\begin{equation}
+w_x^\top D_{xy} C_{yy}^{-1}(C_{xy} + \lambda_3 D_{xy})^\top w_x = 0 \label{eq2}
+\end{equation}
+Both have to be solved at the same time for some $\lambda_3$.
+
+\subsubsection*{Numerical Considerations}
+
+To solve Eqs.~\eqref{eq1} and \eqref{eq2}, we analyze limiting cases. Consider the regime where $\lambda_3$ is large such that $C_{xy}$ can be ignored relative to $\lambda_3 D_{xy}$. Then:
+\begin{align}
+\lambda_3^2 C_{xx}^{-1} D_{xy} C_{yy}^{-1} D_{xy}^\top w_x &= \lambda^2 w_x \label{eq7}\\
+w_x^\top D_{xy} C_{yy}^{-1} D_{xy}^\top w_x &= 0 \label{eq8}
+\end{align}
+
+Multiplying the Eq.~\eqref{eq7} by $w_x^\top C_{xx}$ yields:
+\[
+\lambda_3^2 w_x^\top D_{xy} C_{yy}^{-1} D_{xy}^\top w_x = \lambda^2,
+\]
+which contradicts Eq.~\eqref{eq8} unless the left-hand side is zero. Thus, large $\lambda_3$ do not yield valid solutions.
+
+We define a critical threshold $\lambda_3^c \approx \pm \|C_{xy}\|_F / \|D_{xy}\|_F$, where $\|\cdot\|_F$ denotes the Frobenius norm. For ease of computation, the Frobenius norm is a strategic choice. Valid solutions must lie within this range, and we can perform an exhaustive search over $\lambda_3 \in [-\lambda_3^c, \lambda_3^c]$ to find feasible solutions. In the following implementation, and the main text, we will drop the transposed symbol $\dots^\top$ for brevity.
+
+\subsubsection*{Numerical Solver}
+
+\begin{algorithm}[H]
+\caption{Full solver for the CRM optimization problem.}\label{alg:full_solver}
+\begin{algorithmic}
+\State $C_{xx} \gets XX^\top,\quad C_{yy} \gets YY^\top,\quad C_{xy} \gets XY^\top$ \Comment{Covariance matrices}
+\State $D_{xy} \gets ST^\top$ \Comment{Constraint matrix}
+\State $s \gets \{\}$ \Comment{Initialize solution list}
+\State $\lambda_3^c \gets \|C_{xy}\|_F / \|D_{xy}\|_F$ \Comment{Estimate search range}
+\For{$\lambda_3 \in [-\lambda_3^c, \lambda_3^c]$}
+    \State $M \gets C_{xx}^{-1}(C_{xy} + \lambda_3 D_{xy}) C_{yy}^{-1}(C_{xy} + \lambda_3 D_{xy})^\top$
+    \State $(\text{eigvecs}, \text{eigvals}) \gets \text{Eigendecomposition}(M)$
+    \For{each $(w_x, \mu)$ in $(\text{eigvecs}, \text{eigvals})$}
+        \State $w_x \gets w_x / \sqrt{w_x^\top C_{xx} w_x}$ \Comment{Normalize}
+        \State $w_y \gets C_{yy}^{-1}(C_{xy} + \lambda_3 D_{xy})^\top w_x / \sqrt{\mu}$ \Comment{Compute $w_y$}
+        \If{$|w_x^\top D_{xy} w_y| < \epsilon$}
+            \State $s \gets s \cup \{\lambda_3\}$ \Comment{Store valid solution}
+        \EndIf
+    \EndFor
+\EndFor
+\State \Return $s$
+\end{algorithmic}
+\end{algorithm}
+We provide an implementation of this scheme in Matlab as
+\begin{verbatim} compute_weights_full.m \end{verbatim}
+
+As this search is exhaustive, scanning through all values of $\lambda_3$ can be computationally expensive. If only a single solution is desired, the problem can be reformulated as a root-finding task. Specifically, we seek the value of $\lambda_3$ for which the constraint function $w_x^\top D_{xy} w_y$ evaluates to zero. This leads to the following helper function, that can be solved with typical root finders.
+
+\begin{algorithm}[H]
+\caption{Simplified solver for CRM using root-finding.}\label{alg:simplified_solver}
+\begin{algorithmic}
+\Procedure{Helper}{$\lambda_3, C_{xx}, C_{yy}, C_{xy}, D_{xy}$}
+    \State $M \gets C_{xx}^{-1}(C_{xy} + \lambda_3 D_{xy}) C_{yy}^{-1}(C_{xy} + \lambda_3 D_{xy})^\top$
+    \State $(w_x, \mu) \gets \text{LargestEigenpair}(M)$
+    \State $w_x \gets w_x / \sqrt{w_x^\top C_{xx} w_x}$
+    \State $w_y \gets C_{yy}^{-1}(C_{xy} + \lambda_3 D_{xy})^\top w_x / \sqrt{\mu}$
+    \State \Return $w_x^\top D_{xy} w_y$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+We provide an implementation of this simpler scheme in Matlab as
+\begin{verbatim} compute_weights.m \end{verbatim}
+
+
+\subsubsection*{Regularization}
+
+In the limit where $D_{xy} \to 0$, Eq.~\eqref{eq1} reduces to:
+\[
+C_{xx}^{-1} C_{xy} C_{yy}^{-1} C_{xy}^\top w_x = \lambda^2 w_x,
+\]
+which corresponds to classical Canonical Correlation Analysis (CCA). Thus, CRM generalizes CCA by introducing a regularization term $\lambda_3 D_{xy}$.
+
+When $\lambda_3 \to 0$, the constraint in Eq.~\eqref{eq2} is ignored, and the solution converges to standard CCA. Conversely, when $C_{xy} \approx 0$, the Eigendecomposition becomes unstable. In such cases, the regularization term $\lambda_3 D_{xy}$ can improve numerical stability.
+
+
+In addition, it may be desirable to add regularization to the covariance matrices $C_{xx}$ and $C_{yy}$ which can further prevent overfitting \cite{tuzhilinaCanonicalCorrelationAnalysis2023}. I.e., we derive the regularized covariance matrices $\tilde{C}_{xx}$ and $\tilde{C}_{yy}$, with
+\[
+\tilde{C}_{xx} = C_{xx} + \gamma \mathbf{I}, \quad \tilde{C}_{yy} = C_{yy} + \gamma \mathbf{I},
+\]
+where $\gamma$ is a small constant and $\mathbf{I}$ is the identity Matrix. We then apply algorithm \ref{alg:simplified_solver} to the regularized covariance matrices.
+
+\subsection*{Principle of CRM on simulated data}
+
+This section describes Fig.~\ref{fig:MainFig2}. The entire figure was produced programmatically, and can be reproduced by running:
+\begin{verbatim} Fig2_simulation.m \end{verbatim}
+
+\subsubsection*{CRM on numerous observations of variates}
+For panels a, b and c, we produced a list of $X\in\R^{p\times n}$ from normally distributed random numbers with unit variance, and computed from them $Y=M\times X + \alpha\,\eta $ where $M\in\R^{q\times p}$ is a fixed matrix with random entries drawn from a normal distribution with unit variance. We chose $p=q=10$ and $n=10000$. The contribution of normally distributed noise $\eta\in\R^{q\times n}$ was set with a numerical parameter $\alpha$. This procedure yielded the correlated datasets $X$ and $Y$. In addition to these two datasets, we simulated another two random datasets $S\in\R^{q\times n}\sim\mathcal{N}(\mu=0,\sigma=1)$ and $T=(\beta N + (1-\beta)M) \times S$ where $N\in\R^{q\times p}\sim\mathcal{N}(\mu=0,\sigma=1)$ is a random matrix, and $M$ is taken from above. The partial alignment of $X,Y$ and $S,T$ via the shared matrix $M$ makes the CRM problem challenging. The parameter $\beta$ tunes this alignment, and was set ad-hoc to $\beta=1/4$. For each noise level between $\alpha=0.05$ and $\alpha=10$ in steps of $\Delta\alpha=0.5$. $N=10$ repeats were computed. Shown in Fig.~\ref{fig:MainFig2}a,b are means and SEM over these simulations. For the CCA comparison, the constraint was set to $D_{xy}\to 0$. For panel c, we show the result for a single dataset from noise level $\alpha=10$, in which we scanned through $\lambda_3$ in steps of $\Delta\lambda_3=0.01$, and compute the 10 eigenvalues numerically using MATLAB's eig() function.
+
+\subsubsection*{Removing correlated noise in the time domain}
+For panels d, e and f, we simulated a typical neurophysiological experiment. When recording neural activity with electrodes in two brain areas, signals can be contaminated with shared noise, for example line noise. This is captured by this simple model for data in brain areas $X$ and $Y$:
+\begin{eqnarray}
+A_i(t) &=& n(t) + g(t)\cdot\delta(\text{mod}(i,10)) + \mathcal{X}_i(t),\label{Xftt}\\
+B_i(t) &=& n(t) + g(t)\cdot\delta(\text{mod}(i,10)) + \mathcal{Y}_i(t).\label{Yftt}
+\end{eqnarray}
+Here, $i\in(1,...,N)$ is the electrode index for $N=100$ electrodes in our simulation. $g(t)$ is the signal or representation of interest. Enforced by the Kronecker delta function, it is only present if $\text{mod}(i,10)==0$. In other words, the signal of interest is only present on channels $0, 10, 20, \dots$, 100. In addition, $n(t)$ is a corrupting noise signal active on all electrodes such as line noise. Finally, both data contain uncorrelated noise content that is unique to each electrode and time. These are assumed to be stationary over time, and denoted as $\mathcal{X}_i(t)$ and $\mathcal{Y}_i(t)$. In practice, we model $\mathcal{X}, \mathcal{Y}$ to be normally distributed white noise, the signal of interest $g(t)$ is a low frequency square wave function, and the noise signal $n(t)=A \sin(2\pi f_n t)$ is a high frequency sinusoid. This produces the datasets $A, B$ from with the covariances are computed as above. To use CRM, we also compute band-pass filtered versions of these data,
+\begin{eqnarray}
+\hat{A}_i(t) &=& \text{BF}[A_i(t) ],\\
+\hat{B}_i(t) &=& \text{BF}[B_i(t) ].
+\end{eqnarray}
+Here, $\text{BF}()$ indicated a linear band-pass filter around the noise frequency $f_n$. For simplicity we used MATLAB's default band-pass filter, which is a minimum order-filter with a stop-band attenuation of 60dB and a steepness of 0.85. These filtered signals are used as $S,T$ to compute the covariance $D_{xy}$. Running CCA on these data produces uniform weights across electrodes. CRM on the other hand identifies the shared signals hidden on channels $0, 10, 20, \dots$ and ignores the other channels.
+
+\subsection*{Context-free alignment of neural representations and vector embeddings}
+\subsubsection*{Data set} We analyzed data from the "Podcast dataset" \cite{zadaPodcastECoGDataset2025a} consisting of nine ECoG participants implanted with a total of $1,330$ electrodes. Patients listened to  "Monkey in the Middle", a 30-min podcast that appeared on "This American Life" (Chavis, 2017). The dataset further entails a transcript of the podcast, time-stamps for every word in the podcast, and the corresponding word-embeddings derived from various Large Language Models (LLMs), notably the \texttt{Whisper} model \cite{radfordRobustSpeechRecognition2022}, a model trained on $680,000$ hours of acoustic recordings to transcribe natural conversations.
+
+\subsubsection*{Neural data processing} All analyses were realized on the pre-processed high frequency power data that are provided with the "Podcast" data set.
+The data were down-sampled to 100~Hz and epoched to word-onsets with intervals starting 4s before and ending 4s after word onset. Neural correlates of words were analyzed starting at word 20 from the beginning of the podcast.
+\subsubsection*{Embedding processing} Word embeddings for each word in the story were reduced to 50 principal components \cite{goldsteinSharedComputationalPrinciples2022}. For alignment, we matched each word-embedding to the corresponding word-epoch from the intracranial data. For the control time-series, we matched the word-embedding of the previous word to each word-epoch from the intracranial data.
+\subsubsection*{Cross-validated alignment}
+The neural and behavioral data were partitioned for a 10-fold cross-validation. In each of 10 iterations, 90 percent of the data were used for computation of the alignment transformation and 10 percent of the data were held out to assess the correlation between projected components. Projection of the held-out data was done with the weights obtained from the training data. Alignment was computed across words (startig from word 20) and it was repeated for each time-point around word-onset. I.e, for the iEEG data at lag $X_{l} \in \mathbb{R}^{c \times n}$ (where $c$ denotes the number of channels and $n$ denotes the number of words), and the 50-d embedding data $Y_t \in \mathbb{R}^{50 \times n}$ we obtained the covariance matrices $C_{xx} \in \mathbb{R}^{c \times c}$, $C_{yy} \in \mathbb{R}^{50 \times 50}$, and $C_{xy} \in \mathbb{R}^{c \times 50}$. To compute CRM, the control covariance matrix $D_{xy} \in \mathbb{R}^{c \times 50}$ was obtained from the covariance between the iEEG data $X_{l} \in \mathbb{R}^{c \times n}$, and the time-shifted embedding data  $Y_{t-1} \in \mathbb{R}^{50 \times n}$. To compute CCA, we simply defined $D_{xy} := 0 $. For CCA and CRM we obtained projection vectors $w_x$ and $w_y$ via Algorithm \ref{alg:simplified_solver} and computed the correlation in the held-out data as $r = w_x^\top C_{xy} w_y$. Correlations were then averaged across all test sets; grand-averages and standard error of the mean (SEM) were computed for CRM and CCA across patients.
+\subsubsection*{Component loadings}
+For each fold and alignment method, we computed component loadings to quantify the contribution of individual iEEG channels to the extracted component at lag zero. We defined the component time series on the test data as $k_{0} \in \mathbb{R}^{1 \times n} = w_x^\top X_{0}  $ and computed the loading for channel $(i, \in \{1,\dots,c\})$ as the Pearson correlation between the channel's time series at lag zero $x_{i,0} \in \mathbb{R}^{1 \times n}$ and the component time-series.
+I.e., the loading for channel $(i)$ was computed as the Pearson correlation between $x_{i,0}$ and $k_{0}$.
+
+\begin{equation}
+    l\_i = \mathrm{corr}\bigl(x_{i,0},\,k_{0}\bigr) = \frac{\mathrm{cov}\!\bigl(x_{i,0},\,k_{0}\bigr)}{\sigma(x_{i,0})\,\sigma(k_{0})}\,
+\end{equation}
+
+These channel–component correlations \(l_i\) were averaged across folds to yield a topographical map of loadings for CCA and CRM.
+
+
+\subsection*{Factorizing overlapping representations into their constituent parts}
+\subsubsection*{Data set} We re-analyzed a subset of data from Reagh et al \cite{reaghFlexibleReuseCorticohippocampal2023a}: In the video-viewing of their experiment,
+20 subjects repeatedly watched 8 different videos fo 35s durations in 3 different runs. The 8 videos display 2 characters (Tommy and Lisa) in 2 different schematic situations (cafe and grocery stores) that are visited in 2 different contexts each (cafe 1 and 2, grocery store 1 and 2).
+\subsubsection*{Data analysis}
+We analyzed the beta-weights that were obtained by the authors from a general linear model (GLM) fit on all runs using the AFNI 3dDeconvolve function. We focused on a region of interest in the medial Prefrontal Cortext (mPFC), where overlapping neural representations had been reported in the original study. In a first analysis, we correlated the vectors of beta weights in the mPFC between all 24 trials for each subject to obtain the Representational Similarity Matrix (RSM) of the raw data. We then computed the voxel-by-voxel cross-covariance matrix between all pairs of trials that formed part of the same schema (cafe, grocery), $L_{xy} \in \mathbb{R}^{v \times v}$ context (cafe 1, cafe 2, grocery store 1 and grocery store 2), $M_{xy} \in \mathbb{R}^{v \times v}$, and situation (e.g., Tommy in cafe 1 or Lisa in grocery store 2), $N_{xy} \in \mathbb{R}^{v \times v}$. We further computed the covariance between voxels within videos $C_{xx} \in \mathbb{R}^{v \times v} = C_{yy} \in \mathbb{R}^{v \times v}$ and regularized the matrix at $\gamma = 0.001$. We then factorized representations by applying algorithm \ref{alg:simplified_solver} to obtain 20 components where the correlations between trials of interest is maximized while the correlation of a confounding variable is controlled. Specifically, we first obtained 20 context-components by maximizing the correlation between all pairs of trials that formed part of the same context ($w_x^\top M_{xy} w_y$), while keeping correlations between pairs of trials that formed part of the same schema (but not the same context, i.e., cafe 1 and cafe 2, and grocery store 1 and grocery store 2) at zero, $w_x^\top L_{xy} w_y = 0$.
+
+Next, we obtained 20 situation-components by maximizing the correlation between all pairs of trials that formed part of the same situation ($w_x^\top N_{xy} w_y$), while keeping correlations between pairs of trials that formed part of the same context (but not the same situation, e.g., Tommy in cafe 1 and Lisa in cafe 1) at zero, $w_x^\top M_{xy} w_y = 0$.
+
+Finally, we computed the correlations across the components between all trials for context and situation components.
+
+\subsubsection*{Model comparison}
+To quantify the fit to various representational similarity models, we correlated each Representational Similarity Matrix (RSM) with a schematic, a contextual, and an episode model matrix. The model matrix contained one for every entry that was part of the model (i.e., same schema comparison, same context comparison, same episode comparison) and zero for every entry that was not part of the model (i.e., different schema, different context, different episode). Entries on the diagonal of the matrices (comparisons of trials to themselves) were excluded from this correlation. For the raw data (were correlations had not been fit to correspond to a representational structure of interest), we tested the model fit statistically with a dependent sample t-test across subjects; all p-values correspond to one-sided tests comparing the schema model to the other models and comparing the context model to the episode model.
+
+\subsection*{Unsupervised discovery of coupled spectral features in LFP recordings}
+
+This section describes Fig.~\ref{fig:MainFig5}. The entire figure was produced programmatically, and can be reproduced by running:
+\begin{verbatim} Fig5_analysis.m \end{verbatim}
+
+We re-analyzed a previously published dataset\cite{rosenblumChoiceBehaviorsPrefrontal2025a} from implanted wire arrays in the Hippocampus and medial prefrontal cortex in freely moving rats. The original recordings were made to study Fetal alcohol spectrum disorders in rats by administering alcohol during the first two postnatal weeks, and assessing the animals' working memory through behavior in a maze. The analyzed dataset was taken from the control group. While a rat was solving the spatial working memory problem, recordings sampled at 2000 samples per second were made. The recordings were around 40 min long. We first z-scored the voltage traces, and then computed the spectrographic time-frequency representation $s(f,t)$. We used a Hamming window to divide the signal into 1 second segments. The spectrum was then squared to compute power: $|s(f,t)|^2$. To account for the typical 1/f decay, we computed the log-power for use with CRM: $X=\log( |s_{\text{HPC}}(f,t)|^2)$ and $Y=\log(|s_{\text{mPFC}}(f,t)|^2)$.
+
+To select the noise band (i.e., band-pass filter the data), we applied a Gaussian-shaped filter along the frequency direction of the datasets. We chose $f_0=60\text{ Hz}$ and $s=10\text{ Hz}$
+\begin{eqnarray}
+S = \exp\left(-\frac{(f-f_0)^2}{2s^2} \right)\cdot X\quad \text{and} \quad T = \exp\left(-\frac{(f-f_0)^2}{2s^2} \right)\cdot Y.
+\end{eqnarray}
+To aid numerical stability, the resulting $D_{xy}$ was linearly rescaled to have roughly the same magnitude as $C_{xy}$ using the Frobenius norm (see above). Finally, for easier visualization, the CRM and CCA components were mildly smoothed across the nearest 10 data points in space to produce panels Fig.~\ref{fig:MainFig5}e and Fig.~\ref{fig:MainFig5}f. No smoothing was applied to the other panels.\newline
+
+For the statistical test, we computed the Pearson correlation coefficient between the CRM components in Fig.~\ref{fig:MainFig5}e and Fig.~\ref{fig:MainFig5}f, and the distance of the animal from the home box $r = \text{corrcoef}(\text{CRM},d)$. We used the Euclidean distance
+$d = \sqrt{(x- 600\text{ cm})^2 + (y- 250\text{ cm})^2}$. This number was compared to the null hypothesis that that there is no relationship between the two. The associated null distribution was computed with $N=10000$ random shifts between the position and the CRM time series, and computing the correlation coefficient between the control data. The null distribution was unimodal, and centered around 0.
+
+\section*{Data availability}
+Data analyzed in this paper were provided by third parties. The iEEG data are publicly available in the podcast dataset \cite{zadaPodcastECoGDataset2025a}, fMRI and rodent data are available from Zach Reagh and Amy Griffin \cite{reaghFlexibleReuseCorticohippocampal2023a, rosenblumChoiceBehaviorsPrefrontal2025a}.
+
+\section*{Code availability} \label{sec:Code availability}
+All analysis code used in this manuscript is available from a github repository: \\
+\href{https://github.com/s-michelmann/crm}{https://github.com/s-michelmann/crm}). The code version used for all figures is githash b6452a7.
+
+\section*{Acknowledgments}
+The authors wish to thank Zach Reagh and Amy Griffin for generously sharing their data, Ariel Goldstein for helpful discussions, and Ricardo Alejandro for helpful comments on an earlier version of this manuscript. MS is supported by a Burroughs Wellcome Fund's Career Award at the Scientific Interface.
+
+\bibliography{crm_bib}
+
+
+\end{document}
