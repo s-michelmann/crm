@@ -1,6 +1,5 @@
 *.asv
-*.pdf
 *.mpg
 *.txt
 .DS_Store
-.DS_Store
+data/
