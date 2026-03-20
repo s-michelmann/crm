@@ -9,14 +9,19 @@ No non-standard hardware is required. No GPU is required. Code is confirmed to w
 
 ### Repository Content
     .
-    ├── external                # Ancillary code
-    ├── Fig2                    # Code for simulations in Fig. 2
-    ├── Fig3                    # Code for analyses and plots in Fig. 3
-    ├── Fig4                    # Code for analyses and plots in Fig. 4
-    ├── Fig5                    # Code for analysis in Fig. 5
-    ├── Solver                  # CRM Solver; implemented in matlab.
-    ├── LICENSE                 # Text file: This work is licensed under a CC Attribution 4.0 International License.
-    └── README.md               # Text file: Open Know-How manifest files.   
+    ├── crm/                    # Core CRM solver functions (MATLAB + Python)
+    ├── utils/                  # Helper functions (uniqueness checks, Marchenko-Pastur)
+    ├── analyses/               # Per-figure analysis scripts
+    │   ├── Fig2/               #   Simulations (Fig. 2)
+    │   ├── Fig3/               #   ECoG analysis and plots (Fig. 3)
+    │   ├── Fig4/               #   fMRI analysis and plots (Fig. 4)
+    │   ├── Fig5/               #   Rodent LFP analysis (Fig. 5)
+    │   └── setup/              #   Data setup scripts
+    ├── external/               # External toolboxes (shadedErrorBar, redblue, PCM, RainCloudPlots)
+    ├── data/                   # Datasets (not in repo; see data/INSTRUCTIONS.md)
+    ├── submissions/            # Manuscript figures
+    ├── LICENSE                 # CC Attribution 4.0 International License
+    └── README.md
 
 ## Dependencies
 
