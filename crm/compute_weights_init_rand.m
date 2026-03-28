@@ -144,18 +144,19 @@ function [w_x, w_y, lambda3] = compute_weights_init_rand( ...
 
     % --- No Cholesky path ---
     if ~chlsky
-        fun = @(l) foo2(C_xx, C_yy, C_xy, D_xy, l, f);
+        C_yy_inv = inv(C_yy);
+        C_xx_inv = inv(C_xx);
+        fun = @(l) foo2(C_xx, C_yy, C_xy, D_xy,  C_xx_inv, C_yy_inv, l, f);
         lambda3 = fminsearch(fun, lambda0);
 
-        M = inv(C_xx) * (C_xy + lambda3 * D_xy) * ...
-            inv(C_yy) * (C_xy + lambda3 * D_xy)';
+        M = C_xx_inv * (C_xy + lambda3 * D_xy) * C_yy_inv * (C_xy + lambda3 * D_xy)';
 
         [W, D] = eigs(M, f, 'lr');
         w_x = W(:,f);
         w_x = w_x ./ sqrt(w_x' * C_xx * w_x);
 
         lbd = sqrt(D(f,f));
-        w_y = -inv(C_yy) * (C_xy + lambda3 * D_xy)' / lbd * w_x;
+        w_y = -C_yy_inv * (C_xy + lambda3 * D_xy)' / lbd * w_x;
 
     else
         % --- Cholesky path ---
@@ -183,13 +184,13 @@ function [w_x, w_y, lambda3] = compute_weights_init_rand( ...
     end
 end
 
-function [tst] = foo2(C_xx, C_yy, C_xy, D_xy, lbd3, f)
+function [tst] = foo2(C_xx, C_yy, C_xy, D_xy, C_xx_inv, C_yy_inv, lbd3, f)
     % calculate the f largest eigenvalues only!
-    M = inv(C_xx)*(C_xy+lbd3*D_xy)*inv(C_yy)* ((C_xy+lbd3*D_xy)');
+    M = C_xx_inv*(C_xy+lbd3*D_xy)*C_yy_inv*((C_xy+lbd3*D_xy)');
     [W,D] = eigs(M,f,'lr');
     w_x = W(:,f);
     w_x = w_x./sqrt(w_x'*C_xx*w_x);
-    w_y = inv(C_yy)*(C_xy+lbd3*D_xy)'*w_x;
+    w_y = C_yy_inv*(C_xy+lbd3*D_xy)'*w_x;
     tst = abs(w_x'*D_xy*w_y);
 end
 
