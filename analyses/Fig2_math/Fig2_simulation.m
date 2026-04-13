@@ -283,3 +283,39 @@ box(ax,'off')
 %exportgraphics(figure(1), 'fig2.pdf');
 
 toc
+
+%%
+figure(3)
+
+C_xy = X*Y';
+C_xx = X*X';
+C_yy = Y*Y';
+
+Z = sin(fnoise*t);
+C_xz = X*Z';
+C_zz = Z*Z';
+C_zy = Z*Y';
+
+
+Xclean = X - C_xz*inv(C_zz)*Z;
+Yclean = Y - C_zy'*inv(C_zz)*Z;
+
+C_xx = Xclean*Xclean';
+C_yy = Yclean*Yclean';
+
+C_xyclean = C_xy - C_xz*inv(C_zz)*C_zy;
+
+[w_xparCCA, w_yparCCA, lambda3, Wxs, Wys, lambdas, corrs] = crm(C_xx, C_yy, C_xyclean, 0*D_xy_parCCA);
+
+
+plot(X'*w_xparCCA)
+hold on
+plot(Yclean'*w_yparCCA)
+ylabel("res. CCA component")
+xlabel("Observation number")
+set(gca, 'tickdir','out');
+% ylim([-0.5, 0.8])
+xlim([0,1000])
+legend('Data A', 'Data B', 'Representation of interest', 'Location','northwest')
+ax = gca
+box(ax,'off')

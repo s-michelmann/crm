@@ -5,3 +5,6 @@
 data/
 *.pdf
 *.pdf
+*.pdf
+/analyses/Fig7_color/.ipynb_checkpoints
+.DS_Store
