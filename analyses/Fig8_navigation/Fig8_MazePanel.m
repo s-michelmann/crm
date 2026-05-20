@@ -3,22 +3,18 @@
 close all;
 clear all;
 
-tic % 511 seconds
-
-%% Load data + Make spectra
-
-nff = 1024;
+nff = 2048;
 fs = 2000;
 nsc = 2000; % 1s chunks for spectrum
 nov = floor(nsc/2);
 
-load('PFC_black.mat')
+load('../../data/PFC_black.mat')
 y = Samples(:);
 y = (y-mean(y))./std(y);
 [sy,f,t] = spectrogram(y,hamming(nsc, 'periodic'),nov,nff,fs);
 Y = abs(sy).^2;
 
-load('HPC_blue.mat')
+load('../../data/HPC_blue.mat')
 x = Samples(:);
 x = (x-mean(x))./std(x);
 [sx,f,t] = spectrogram(x,hamming(nsc, 'periodic'),nov,nff,fs);
@@ -28,13 +24,15 @@ X = log(X(f<100,:));
 Y = log(Y(f<100,:));
 f = f(f<100);
 
-C_xy = X*Y';
-C_xx = X*X';
-C_yy = Y*Y';
 
-[r_wxCCA, r_wyCCA, r_lamCCA, wxcxywyCCA, wxdxywyCCA, wxcxxwxCCA, wycyywyCCA] = compute_weights_full(C_xx, C_yy, C_xy, 0*C_xy);
 
+%%
 % use CRM to denoise, see spectral_denoising.m for example on simulation.
+
+Cxy = X*Y';
+Cxx = X*X';
+Cyy = Y*Y';
+
 sfilt = 10;
 ffilt = 60;
 
@@ -43,14 +41,56 @@ filter = exp( - (f-ffilt).^2 ./ (2*sfilt*sfilt));
 S = filter.*Y;
 T = filter.*X;  
 
-D_xy = S*T';
-a = norm(C_xy,'fro')/norm(D_xy,'fro');
-D_xy = a*D_xy;
+Dxy = S*T';
+a = norm(Cxy,'fro')/norm(Dxy,'fro');
+Dxy = a*Dxy;
 
-[r_wxCRM, r_wyCRM, r_lamCRM, wxcxywyCRM, wxdxywyCRM, wxcxxwxCRM, wycyywyCRM] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
+gamma = 0.01 * trace(Cyy);
+
+[w_xCRM, w_yCRM, lambda3, Wxs, Wys, lambdas, corrs] = crm(Cxx, Cyy, Cxy, Dxy, gamma=gamma);
 
 
-load('VT1.mat')
+%% 
+% Residualize and use CCA
+fnoise = 2*3.14*60;
+t = (1:length(x))/fs;
+
+Xcleaned = zeros(size(x));
+Xfit = zeros(size(x));
+b0 = sin(fnoise*t)' \ x;
+b1 = cos(fnoise*t)' \ x;
+xfit =   b0*sin(fnoise*t) + b1*cos(fnoise*t);
+xcleaned = x -  xfit';
+
+Ycleaned = zeros(size(y));
+Yfit = zeros(size(y));
+b0 = sin(fnoise*t)' \ y;
+b1 = cos(fnoise*t)' \ y;
+yfit =   b0*sin(fnoise*t) + b1*cos(fnoise*t);
+ycleaned = y -  yfit';
+
+[sy,f,t] = spectrogram(ycleaned,hamming(nsc, 'periodic'),nov,nff,fs);
+Ycleaned = abs(sy).^2;
+
+[sx,f,t] = spectrogram(xcleaned,hamming(nsc, 'periodic'),nov,nff,fs);
+Xcleaned = abs(sx).^2;
+
+Xcleaned = log(Xcleaned(f<100,:));
+Ycleaned = log(Ycleaned(f<100,:));
+f = f(f<100);
+
+% "Clean" Covariance Matrices
+C_xy = Xcleaned*Ycleaned';
+C_xx = Xcleaned*Xcleaned';
+C_yy = Ycleaned*Ycleaned';
+
+[w_xCCA, w_yCCA, lambda3, Wxs, Wys, lambdas, corrs] = crm(C_xx, C_yy, C_xy, 0*Dxy);
+
+imagesc(t, f, Ycleaned)
+
+
+%%
+load('../../data/VT1.mat')
 tt = (Timestamps' - min(TimeStamps))*1e-6; % From behavior, measured in mus.
 positionX = [];
 positionY = [];
@@ -62,11 +102,6 @@ end
 
 %%
 
-w_xCCA = r_wxCCA(:,1);
-w_xCRM = r_wxCRM(:,1);
-
-w_yCCA = r_wyCCA(:,1);
-w_yCRM = r_wyCRM(:,1);
 
 col1 = "#7678ed";
 col2 = "#f35b04";
