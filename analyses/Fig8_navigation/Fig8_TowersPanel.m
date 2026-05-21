@@ -181,6 +181,14 @@ plot([0,300],[0,0],'k--')
 title("crm")
 colorbar;
 
+
+%%
+
+figure(2)
+imagesc(neural_data(1:50,1010:1100))
+caxis([0,2.5])
+colorbar;
+
 %% Stats
 
 
