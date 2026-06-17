@@ -63,9 +63,9 @@ box(ax,'off')
 text(-350,-5, "d", 'FontSize', 21)
 
 subplot(3,3,2)
-plot(w_xCCA*1e4,'-o')
+plot(w_xCCA*1e4,'-')
 hold on
-plot(w_yCCA*1e4,'-o')
+plot(w_yCCA*1e4,'-')
 plot([0,N],[0,0],'k--')
 xlabel("Variate number")
 ylabel("CCA weight")
@@ -77,9 +77,9 @@ box(ax,'off')
 text(-25,5.6, "e", 'FontSize', 21)
 
 subplot(3,3,3)
-plot(-w_xCRM*1e3, '-o')
+plot(-w_xCRM*1e3, '-')
 hold on
-plot(-w_yCRM*1e3, '-o')
+plot(-w_yCRM*1e3, '-')
 plot([0,N],[0,0],'k--')
 xlabel("Variate number")
 ylabel("CRM weight")
@@ -133,9 +133,9 @@ legend('Data A', 'Data B', 'Representation of interest', 'Location','northwest')
 
 subplot(3,3,7) % Ridge Regularized CCA
 [w_xCRMRidge, w_yCRMRidge, lambda3, Wxs, Wys, lambdas, corrs] = crm(C_xx, C_yy, C_xy, D_xy, gamma=5000);
-plot(w_xCRMRidge*1e3,'-o')
+plot(w_xCRMRidge*1e3,'-')
 hold on
-plot(w_yCRMRidge*1e3,'-o')
+plot(w_yCRMRidge*1e3,'-')
 plot([0,N],[0,0],'k--')
 xlabel("Variate number")
 ylabel("Ridge-CCA weight")
@@ -147,9 +147,9 @@ box(ax,'off')
 
 subplot(3,3,8) % Sparse CCA
 [w_xCRMSparse, w_yCRMSparse, lambda3, Wxs, Wys, lambdas, corrs] = crm(C_xx, C_yy, C_xy, D_xy,sparsity=0.41);
-plot(-w_xCRMSparse*1e3,'-o')
+plot(-w_xCRMSparse*1e3,'-')
 hold on
-plot(-w_yCRMSparse*1e3,'-o')
+plot(-w_yCRMSparse*1e3,'-')
 plot([0,N],[0,0],'k--')
 xlabel("Variate number")
 ylabel("Sparse-CCA weight")
@@ -305,10 +305,9 @@ C_yy = Yclean*Yclean';
 
 C_xyclean = C_xy - C_xz*inv(C_zz)*C_zy;
 
-[w_xparCCA, w_yparCCA, lambda3, Wxs, Wys, lambdas, corrs] = crm(C_xx, C_yy, C_xyclean, 0*D_xy_parCCA);
+[w_xparCCA, w_yparCCA, lambda3, Wxs, Wys, lambdas, corrs] = crm(C_xx, C_yy, C_xyclean, 0*C_xyclean);
 
-
-plot(X'*w_xparCCA)
+plot(Xclean'*w_xparCCA)
 hold on
 plot(Yclean'*w_yparCCA)
 ylabel("res. CCA component")
@@ -319,3 +318,4 @@ xlim([0,1000])
 legend('Data A', 'Data B', 'Representation of interest', 'Location','northwest')
 ax = gca
 box(ax,'off')
+title("Analytics check for partial CCA")
