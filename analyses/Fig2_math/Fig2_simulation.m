@@ -146,7 +146,9 @@ ax = gca
 box(ax,'off')
 
 subplot(3,3,8) % Sparse CCA
-[w_xCRMSparse, w_yCRMSparse, lambda3, Wxs, Wys, lambdas, corrs] = crm(C_xx, C_yy, C_xy, D_xy,sparsity=0.41);
+%[w_xCRMSparse, w_yCRMSparse, lambda3, Wxs, Wys, lambdas, corrs] = crm(C_xx, C_yy, C_xy, D_xy,sparsity=0.1);
+[w_xCRMSparse, w_yCRMSparse, info] = compute_weights_sparse_projected(C_xx, C_yy, C_xy, D_xy, sparsity=0.75) % Frag doch mal Claude?
+
 plot(-w_xCRMSparse*1e3,'-')
 hold on
 plot(-w_yCRMSparse*1e3,'-')
