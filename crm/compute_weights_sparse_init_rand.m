@@ -99,6 +99,8 @@ function [w_x, w_y] = compute_weights_sparse_init_rand(C_xx, C_yy, C_xy, D_xy, p
 
     % --- Confound penalty weight ---
     if isinf(params.mu)
+    dynamic_mu = isinf(params.mu);
+    if dynamic_mu
         mu = lambda3;
     else
         mu = params.mu;
@@ -154,7 +156,8 @@ function [w_x, w_y] = compute_weights_sparse_init_rand(C_xx, C_yy, C_xy, D_xy, p
         w_y_old = w_y;
 
         % --- Update w_x (w_y fixed) ---
-        grad_x = M_xy * w_y;
+        grad_x = C_xx_r \ (M_xy * w_y);
+
         w_x = w_x + step * grad_x;
         w_x = apply_threshold(w_x, theta_x);
 
@@ -164,9 +167,17 @@ function [w_x, w_y] = compute_weights_sparse_init_rand(C_xx, C_yy, C_xy, D_xy, p
             break
         end
         w_x = w_x / sqrt(nrm_x);
-
-        % --- Update w_y (using the freshly updated w_x) ---
-        grad_y = M_xy' * w_x;
+        
+        % --- Recompute lambda3 (mu) for w_x update --
+        if dynamic_mu
+            v = D_xy' * w_x;
+            u = C_xy' * w_x;
+            mu = -(v' * (C_yy_r \ u)) / (v' * (C_yy_r \ v));
+            M_xy = C_xy + mu * D_xy;
+        end
+        
+        % --- Update w_y (using the freshly updated w_x) --
+        grad_y = C_yy_r \ (M_xy' * w_x);
         w_y = w_y + step * grad_y;
         w_y = apply_threshold(w_y, theta_y);
 
@@ -177,6 +188,15 @@ function [w_x, w_y] = compute_weights_sparse_init_rand(C_xx, C_yy, C_xy, D_xy, p
         end
         w_y = w_y / sqrt(nrm_y);
 
+        
+        % --- Recompute lambda3 (mu) for w_y update ---
+        if dynamic_mu
+            vy = D_xy * w_y;
+            uy = C_xy * w_y;
+            mu = -(vy' * (C_xx_r \ uy)) / (vy' * (C_xx_r \ vy));
+            M_xy = C_xy + mu * D_xy;
+        end
+        
         % --- Convergence ---
         if norm(w_x - w_x_old) + norm(w_y - w_y_old) < params.tol
             break
