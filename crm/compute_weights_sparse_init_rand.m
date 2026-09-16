@@ -10,6 +10,7 @@ function [w_x, w_y] = compute_weights_sparse_init_rand(C_xx, C_yy, C_xy, D_xy, p
     %    the combined objective  w_x' * (C_xy + mu * D_xy) * w_y
     % 4. Applies soft‑thresholding to enforce L1 constraints
     % 5. Renormalizes w_x, w_y in the C_xx / C_yy metric
+    % 6. Dynamically updates mu (lambda_3) to enforce confounding constraints
     %
     % -------------------------------------------------------------------------
     %   INPUTS
@@ -98,7 +99,6 @@ function [w_x, w_y] = compute_weights_sparse_init_rand(C_xx, C_yy, C_xy, D_xy, p
         f=params.f, gamma=gamma, chlsky=chlsky, k=k);
 
     % --- Confound penalty weight ---
-    if isinf(params.mu)
     dynamic_mu = isinf(params.mu);
     if dynamic_mu
         mu = lambda3;
