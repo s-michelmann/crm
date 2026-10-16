@@ -7,7 +7,7 @@ rng(1)
 
 Nobservations = 10000;
 Nsubjects = 10;
-Nrepeats = 36; % Something divisible by 12
+Nrepeats = 12*10; % Something divisible by 12
 Nrank = 8;
 Ncrossval = 5;
 noiserange = 0.1:0.1:3;
@@ -50,7 +50,6 @@ for noise = noiserange
                 C_yy = Ytrain*Ytrain';
                 D_xy = Strain*Ttrain';
                 D_xytest = S(:,testflag==1)*T(:,testflag==1)';
-                % [r_wx, r_wy, r_lam, wxcxywy, wxdxywy, wxcxxwx, wycyywy] = compute_weights_full(C_xx, C_yy, C_xy, D_xy);
                 [r_wx, r_wy, r_lam, ~, ~, ~, ~] = crm(C_xx, C_yy, C_xy, D_xy);
                 if length(r_wx)>0
                     w_x = r_wx(:,1);
@@ -110,9 +109,8 @@ end
 
 figure(1),clf;
 
-subplot(1,2,1), hold on;
+subplot(1,3,1), hold on;
 imagesc(1:8, 0.25:0.25:3, M)
-title("CCA con")
 xlim([1,8])
 ylim([0.25,3.1])
 xlabel("Rank of nuisance variable")
@@ -124,9 +122,8 @@ title("CCA")
 set(gca, 'tickdir','out');
 text(0, 3.1, "a", 'FontSize', 15)
 
-subplot(1,2,2), hold on;
+subplot(1,3,2), hold on;
 imagesc(1:8, 0.25:0.25:3, N)
-title("CRM con")
 set(gca, 'YDir', 'normal')
 colorbar;
 xlabel("Rank of nuisance variable")
@@ -137,6 +134,20 @@ clim([0,0.00001])
 ylabel("Noise Amplitude")
 set(gca, 'tickdir','out');
 text(0, 3.1, "b", 'FontSize', 15)
+
+subplot(1,3,3), hold on;
+imagesc(1:8, 0.25:0.25:3, log10(M./N))
+title("log(CCA/CRM) ratio")
+set(gca, 'YDir', 'normal')
+colorbar;
+xlabel("Rank of nuisance variable")
+xlim([1,8])
+ylim([0.25,3.1])
+clim([0,10])
+ylabel("Noise Amplitude")
+set(gca, 'tickdir','out');
+text(0, 3.1, "c", 'FontSize', 15)
+
 
 save("SupplFig1.mat")
 exportgraphics(figure(1), 'SupplFig1.pdf');
